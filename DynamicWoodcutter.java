@@ -52,7 +52,7 @@ import org.rsbot.script.wrappers.RSTile;
 import org.rsbot.script.wrappers.RSWeb;
 
 @ScriptManifest(website = "http://goo.gl/WEQX6", authors = { "hlunnb" }, keywords = { "Woodcutting, Firemaking" },
-        name = "Dynamic Woodcutter", version = 1.82,
+        name = "Dynamic Woodcutter", version = 1.83,
         description = "Independently trains Woodcutting and Firemaking from a low level.")
 public class DynamicWoodcutter extends Script implements PaintListener, MouseListener, MouseMotionListener, MessageListener {
 	final RSArea adviserHouse = new RSArea(new RSTile(3229, 3236), new RSTile(3232, 3241));
@@ -183,7 +183,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int initialXP2 = -1;
 	boolean wasLoggedOut = false;
 	double scriptVersion = DynamicWoodcutter.class.getAnnotation(ScriptManifest.class).version();
-	double currVer;
+	double currVer = -1;
+	boolean loading = false;
 	final Timer dotTimer = new Timer(200);
 	final Timer screenShot = new Timer(7200000);
 	final Timer dropTimer = new Timer(1300);
@@ -193,6 +194,16 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int treeFails = 0;
 	boolean dropLogs;
 	boolean scriptRunning = true;
+	private final static int[] dropPath1 = { 1, 2, 3, 4, 8, 7, 6, 5, 9, 10, 11, 12, 16, 15, 14, 13, 17, 18, 19, 20, 24,
+	        23, 22, 21, 25, 26, 27, 28 };
+	private final static int[] dropPath2 = { 1, 5, 2, 9, 6, 3, 13, 10, 7, 4, 17, 14, 11, 8, 21, 18, 15, 12, 25, 22, 19,
+	        16, 26, 23, 20, 28 };
+	private final static int[] dropPath3 = { 1, 5, 9, 13, 17, 21, 25, 2, 6, 10, 14, 18, 22, 26, 3, 7, 11, 15, 19, 23,
+	        27, 4, 8, 12, 16, 20, 24, 28 };
+	private final static int[] dropPath4 = { 4, 3, 2, 1, 5, 6, 7, 8, 12, 11, 10, 9, 13, 14, 15, 16, 20, 19, 18, 17, 21,
+	        22, 23, 24, 28, 27, 26, 25 };
+	private final static int[] dropPath5 = { 1, 2, 6, 5, 9, 10, 14, 13, 17, 18, 22, 21, 25, 26, 3, 4, 8, 7, 11, 12, 16,
+	        15, 19, 20, 24, 23, 27, 28 };
 
 	private enum State {
 		BUYHATCHET, TREE, OAK, WILLOWRIMM, WILLOWLUMB, WILLOWPORT, WILLOWDRAY, BUYRUNEHATCHET, CHECKBANK, DEPOSIT,
@@ -201,13 +212,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	@Override
 	public boolean onStart() {
 		mouse.setSpeed(6);
-		currVer = getCurrentVersion();
-		if (scriptVersion >= currVer)
-			log(Color.green, "Your version: " + scriptVersion + ", Latest version: " + currVer
-			        + ". Your script is up to date.");
-		else
-			log(Color.red, "Your version: " + scriptVersion + ", Latest version: " + currVer
-			        + ". You should get the latest version.");
 		new PaintUpdater();
 		return true;
 	}
@@ -760,24 +764,76 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		} // end of switch
 		return random(300, 500);
 	}
+	private int[] reverse(int[] b) {
+		for (int left = 0, right = b.length - 1; left < right; left++, right--) {
+			int temp = b[left];
+			b[left] = b[right];
+			b[right] = temp;
+		}
+		return b;
+	}
 	private int dropLogs() {
 		final RSItem[] logs = inventory.getItems(logIDs);
 		if (logs.length == 0)
 			dropLogs = false;
-		if (random(0, 2) == 0)
-			for (int i = random(0, logs.length - 1); i < logs.length && i >= 0; i++) {
-				logs[i].interact("Drop");
-				final int count = inventory.getCount(logIDs);
-				if (count > 5 && random(0, 10) == 0)
-					i++;
+		int[] chosenPath = null;
+		switch (random(0, 6)) {
+			case 0:
+				if (random(0, 2) == 0)
+					for (int i = random(0, logs.length - 1); i < logs.length && i >= 0; i++) {
+						logs[i].interact("Drop");
+						final int count = inventory.getCount(logIDs);
+						if (count > 5 && random(0, 10) == 0)
+							i++;
+					}
+				else
+					for (int i = random(0, logs.length - 1); i >= 0; i--) {
+						logs[i].interact("Drop");
+						final int count = inventory.getCount(logIDs);
+						if (count > 5 && random(0, 10) == 0)
+							i--;
+					}
+				return 0;
+			case 1:
+				if (random(0, 2) == 0)
+					chosenPath = dropPath1;
+				else
+					chosenPath = reverse(dropPath1);
+				break;
+			case 2:
+				if (random(0, 2) == 0)
+					chosenPath = dropPath2;
+				else
+					chosenPath = reverse(dropPath2);
+				break;
+			case 3:
+				if (random(0, 2) == 0)
+					chosenPath = dropPath3;
+				else
+					chosenPath = reverse(dropPath3);
+				break;
+			case 4:
+				if (random(0, 2) == 0)
+					chosenPath = dropPath4;
+				else
+					chosenPath = reverse(dropPath4);
+				break;
+			case 5:
+				if (random(0, 2) == 0)
+					chosenPath = dropPath5;
+				else
+					chosenPath = reverse(dropPath5);
+				break;
+		}
+		for (int i : chosenPath) {
+			RSItem log = inventory.getItemAt(i - 1);
+			for (int id : logIDs) {
+				if (log.getID() == id) {
+					log.interact("Drop");
+					sleep(random(50, 100));
+				}
 			}
-		else
-			for (int i = random(0, logs.length - 1); i >= 0; i--) {
-				logs[i].interact("Drop");
-				final int count = inventory.getCount(logIDs);
-				if (count > 5 && random(0, 10) == 0)
-					i--;
-			}
+		}
 		return random(200, 500);
 	}
 	private int walkToGE() {
@@ -868,8 +924,17 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			env.saveScreenshot(true);
 			screenShot.reset();
 		}
-		if (!checkedGE)
-			new GrandExchangeChecker();
+		if (!loading) {
+			loading = true;
+			if (currVer == -1) {
+				new InformationLoader(InformationLoader.VERSION);
+				return 0;
+			}
+			if (!checkedGE) {
+				new InformationLoader(InformationLoader.CHECKGE);
+				return 0;
+			}
+		}
 		if (wait) {
 			status = "Waiting" + dots;
 			startTime = System.currentTimeMillis();
@@ -1514,7 +1579,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	private double getCurrentVersion() {
 		try {
 			final BufferedReader r = new BufferedReader(new InputStreamReader(new URL(
-			    "https://raw.github.com/hlunnb/DynamicWoodcutter/master/version.txt").openStream()));
+//			    "https://raw.github.com/hlunnb/DynamicWoodcutter/master/version.txt").openStream()));
+			    "http://pastebin.com/raw.php?i=SePHdUFV").openStream()));
 			final double d = Double.parseDouble(r.readLine());
 			r.close();
 			return d;
@@ -1529,39 +1595,56 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		} catch (final Exception e) {}
 	}
 
-	class GrandExchangeChecker extends Thread {
-		GrandExchangeChecker() {
+	class InformationLoader extends Thread {
+		public static final int VERSION = 0;
+		public static final int CHECKGE = 1;
+		int i;
+		InformationLoader(int i) {
+			this.i = i;
 			this.start();
 		}
 		public void run() {
-			if (!checkedGE) {
-				try {
+			switch (i) {
+				case 0:
+					currVer = 0;
+					currVer = getCurrentVersion();
+					if (scriptVersion >= currVer)
+						log(Color.green, "Your version: " + scriptVersion + ", Latest version: " + currVer
+						        + ". Your script is up to date.");
+					else
+						log(Color.red, "Your version: " + scriptVersion + ", Latest version: " + currVer
+						        + ". You should get the latest version.");
+					break;
+				case 1:
 					checkedGE = true;
-					log("Loading prices from Grand Exchange.");
-					oakPrice = grandExchange.lookup("Oak logs").getGuidePrice();
-					runeHatchetPrice = grandExchange.lookup("Rune hatchet").getGuidePrice();
-				} catch (final Exception e) {
-					checkedGE = true;
-					log.severe("Could not get Grand Exchange prices.");
-					final int sleep = random(60, 300);
-					log("Will try again in: " + sleep + " seconds.");
-					final long stopTime = System.currentTimeMillis() + sleep * 1000;
-					while (System.currentTimeMillis() < stopTime && scriptRunning)
-						try {
-							sleep(100);
-						} catch (final InterruptedException e1) {
-							e1.printStackTrace();
-						}
-					checkedGE = false;
-					return;
-				}
-				if (oakPrice != -1 && runeHatchetPrice != -1)
-					log("Rune hatchet price: " + runeHatchetPrice + " gp, " + "Oak price: " + oakPrice + " gp.");
-				else {
-					oakPrice = 30; // Set lower.
-					runeHatchetPrice = 10000; // Set higher.
-				}
+					try {
+						log("Loading prices from Grand Exchange.");
+						oakPrice = grandExchange.lookup("Oak logs").getGuidePrice();
+						runeHatchetPrice = grandExchange.lookup("Rune hatchet").getGuidePrice();
+					} catch (final Exception e) {
+						checkedGE = true;
+						log.severe("Could not get Grand Exchange prices.");
+						final int sleep = random(60, 300);
+						log("Will try again in: " + sleep + " seconds.");
+						final long stopTime = System.currentTimeMillis() + sleep * 1000;
+						while (System.currentTimeMillis() < stopTime && scriptRunning)
+							try {
+								sleep(100);
+							} catch (final InterruptedException e1) {
+								e1.printStackTrace();
+							}
+						checkedGE = false;
+						return;
+					}
+					if (oakPrice != -1 && runeHatchetPrice != -1)
+						log("Rune hatchet price: " + runeHatchetPrice + " gp, " + "Oak price: " + oakPrice + " gp.");
+					else {
+						oakPrice = 30; // Set lower.
+						runeHatchetPrice = 10000; // Set higher.
+					}
+					break;
 			}
+			loading = false;
 		}
 	}
 
@@ -1719,165 +1802,165 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		final Rectangle checkBankArea = new Rectangle(200, 345, 25, 25);
 		final Point a = e.getPoint();
 		if (showPaint) {
-	        if (!playClicked) {
-		        if (indHatchet.contains(a))
-			        useAvailableHatchetsSelected = false;
-		        if (aHatchet.contains(a))
-			        useAvailableHatchetsSelected = true;
-		        if (cutYewArea.contains(a))
-			        yewsAfter60Selected = !yewsAfter60Selected;
-		        if (checkBankArea.contains(a))
-			        checkBankSelected = !checkBankSelected;
-		        if (clickArea.contains(a)) {
-			        playClicked = true;
-			        wait = false;
-			        globeSelected = false;
-			        useAvailableHatchets = useAvailableHatchetsSelected;
-			        yewAfter60 = yewsAfter60Selected;
-			        checkBank = checkBankSelected;
-		        }
-	        }
-	        if (fmArea.contains(a))
-		        trainFM = !trainFM;
-	        if (worldArea.contains(a))
-		        globeSelected = !globeSelected;
-	        if (infoArea.contains(a))
-		        sendToURL("http://goo.gl/WEQX6");
-	        if (settingsArea.contains(a))
-		        playClicked = false;
-	        if (!optionsOpenArea.contains(a) && !worldArea.contains(a))
-		        globeSelected = false;
-	        if (globeSelected) {
-		        if (lockArea.contains(a))
-			        locked = !locked;
-		        if (logArea.contains(a))
-			        if (!treeSelected) {
-				        treeSelected = true;
-				        oakSelected = false;
-				        willowSelected = false;
-				        yewSelected = false;
-			        }
-		        if (oakArea.contains(a))
-			        if (!oakSelected) {
-				        treeSelected = false;
-				        oakSelected = true;
-				        willowSelected = false;
-				        yewSelected = false;
-			        }
-		        if (willowArea.contains(a))
-			        if (!willowSelected) {
-				        treeSelected = false;
-				        oakSelected = false;
-				        willowSelected = true;
-				        yewSelected = false;
-			        }
-		        if (yewArea.contains(a))
-			        if (!yewSelected) {
-				        treeSelected = false;
-				        oakSelected = false;
-				        willowSelected = false;
-				        yewSelected = true;
-			        }
-		        if (treeSelected) {
-			        if (idx1.contains(a))
-				        treeLocation = 1;
-			        if (mode1.contains(a)) {
-				        bankTree = false;
-				        dropTree = false;
-			        }
-			        if (mode2.contains(a)) {
-				        dropTree = true;
-				        bankTree = false;
-			        }
-			        if (mode3.contains(a)) {
-				        bankTree = true;
-				        dropTree = false;
-			        }
-		        }
-		        if (oakSelected) {
-			        if (idx1.contains(a))
-				        oakLocation = 1;
-			        if (idx2.contains(a))
-				        oakLocation = 2;
-			        if (idx3.contains(a))
-				        oakLocation = 3;
-			        if (mode1.contains(a)) {
-				        bankOak = true;
-				        dropOak = false;
-				        powerchopOak = false;
-			        }
-			        if (mode2.contains(a)) {
-				        dropOak = true;
-				        bankOak = false;
-				        powerchopOak = false;
-			        }
-			        if (mode3.contains(a)) {
-				        bankOak = false;
-				        dropOak = false;
-				        powerchopOak = true;
-			        }
-		        }
-		        if (willowSelected) {
-			        if (idx1.contains(a))
-				        willowLocation = 1;
-			        if (idx2.contains(a))
-				        willowLocation = 2;
-			        if (idx3.contains(a))
-				        willowLocation = 3;
-			        if (idx4.contains(a))
-				        willowLocation = 4;
-			        if (willowLocation == 1 || willowLocation == 2) {
-				        if (mode1.contains(a)) {
-					        bankWillow = false;
-					        dropWillow = false;
-					        powerchopWillow = false;
-				        }
-				        if (mode2.contains(a)) {
-					        dropWillow = false;
-					        bankWillow = true;
-					        powerchopWillow = false;
-				        }
-				        if (mode3.contains(a)) {
-					        bankWillow = false;
-					        dropWillow = true;
-					        powerchopWillow = false;
-				        }
-				        if (mode4.contains(a)) {
-					        bankWillow = false;
-					        dropWillow = false;
-					        powerchopWillow = true;
-				        }
-			        }
-			        if (willowLocation == 3 || willowLocation == 4) {
-				        if (mode1.contains(a)) {
-					        dropWillow = false;
-					        bankWillow = true;
-					        powerchopWillow = false;
-				        }
-				        if (mode2.contains(a)) {
-					        bankWillow = false;
-					        dropWillow = true;
-					        powerchopWillow = false;
-				        }
-				        if (mode3.contains(a)) {
-					        bankWillow = false;
-					        dropWillow = false;
-					        powerchopWillow = true;
-				        }
-				        if (!bankWillow && !powerchopWillow && !dropWillow)
-					        bankWillow = true;
-			        }
-		        }
-		        if (yewSelected) {
-			        if (idx1.contains(a))
-				        yewLocation = 1;
-			        if (idx2.contains(a))
-				        yewLocation = 2;
-			        if (idx3.contains(a))
-				        yewLocation = 3;
-		        }
-	        }
-        }
+			if (!playClicked) {
+				if (indHatchet.contains(a))
+					useAvailableHatchetsSelected = false;
+				if (aHatchet.contains(a))
+					useAvailableHatchetsSelected = true;
+				if (cutYewArea.contains(a))
+					yewsAfter60Selected = !yewsAfter60Selected;
+				if (checkBankArea.contains(a))
+					checkBankSelected = !checkBankSelected;
+				if (clickArea.contains(a)) {
+					playClicked = true;
+					wait = false;
+					globeSelected = false;
+					useAvailableHatchets = useAvailableHatchetsSelected;
+					yewAfter60 = yewsAfter60Selected;
+					checkBank = checkBankSelected;
+				}
+			}
+			if (fmArea.contains(a))
+				trainFM = !trainFM;
+			if (worldArea.contains(a))
+				globeSelected = !globeSelected;
+			if (infoArea.contains(a))
+				sendToURL("http://goo.gl/WEQX6");
+			if (settingsArea.contains(a))
+				playClicked = false;
+			if (!optionsOpenArea.contains(a) && !worldArea.contains(a))
+				globeSelected = false;
+			if (globeSelected) {
+				if (lockArea.contains(a))
+					locked = !locked;
+				if (logArea.contains(a))
+					if (!treeSelected) {
+						treeSelected = true;
+						oakSelected = false;
+						willowSelected = false;
+						yewSelected = false;
+					}
+				if (oakArea.contains(a))
+					if (!oakSelected) {
+						treeSelected = false;
+						oakSelected = true;
+						willowSelected = false;
+						yewSelected = false;
+					}
+				if (willowArea.contains(a))
+					if (!willowSelected) {
+						treeSelected = false;
+						oakSelected = false;
+						willowSelected = true;
+						yewSelected = false;
+					}
+				if (yewArea.contains(a))
+					if (!yewSelected) {
+						treeSelected = false;
+						oakSelected = false;
+						willowSelected = false;
+						yewSelected = true;
+					}
+				if (treeSelected) {
+					if (idx1.contains(a))
+						treeLocation = 1;
+					if (mode1.contains(a)) {
+						bankTree = false;
+						dropTree = false;
+					}
+					if (mode2.contains(a)) {
+						dropTree = true;
+						bankTree = false;
+					}
+					if (mode3.contains(a)) {
+						bankTree = true;
+						dropTree = false;
+					}
+				}
+				if (oakSelected) {
+					if (idx1.contains(a))
+						oakLocation = 1;
+					if (idx2.contains(a))
+						oakLocation = 2;
+					if (idx3.contains(a))
+						oakLocation = 3;
+					if (mode1.contains(a)) {
+						bankOak = true;
+						dropOak = false;
+						powerchopOak = false;
+					}
+					if (mode2.contains(a)) {
+						dropOak = true;
+						bankOak = false;
+						powerchopOak = false;
+					}
+					if (mode3.contains(a)) {
+						bankOak = false;
+						dropOak = false;
+						powerchopOak = true;
+					}
+				}
+				if (willowSelected) {
+					if (idx1.contains(a))
+						willowLocation = 1;
+					if (idx2.contains(a))
+						willowLocation = 2;
+					if (idx3.contains(a))
+						willowLocation = 3;
+					if (idx4.contains(a))
+						willowLocation = 4;
+					if (willowLocation == 1 || willowLocation == 2) {
+						if (mode1.contains(a)) {
+							bankWillow = false;
+							dropWillow = false;
+							powerchopWillow = false;
+						}
+						if (mode2.contains(a)) {
+							dropWillow = false;
+							bankWillow = true;
+							powerchopWillow = false;
+						}
+						if (mode3.contains(a)) {
+							bankWillow = false;
+							dropWillow = true;
+							powerchopWillow = false;
+						}
+						if (mode4.contains(a)) {
+							bankWillow = false;
+							dropWillow = false;
+							powerchopWillow = true;
+						}
+					}
+					if (willowLocation == 3 || willowLocation == 4) {
+						if (mode1.contains(a)) {
+							dropWillow = false;
+							bankWillow = true;
+							powerchopWillow = false;
+						}
+						if (mode2.contains(a)) {
+							bankWillow = false;
+							dropWillow = true;
+							powerchopWillow = false;
+						}
+						if (mode3.contains(a)) {
+							bankWillow = false;
+							dropWillow = false;
+							powerchopWillow = true;
+						}
+						if (!bankWillow && !powerchopWillow && !dropWillow)
+							bankWillow = true;
+					}
+				}
+				if (yewSelected) {
+					if (idx1.contains(a))
+						yewLocation = 1;
+					if (idx2.contains(a))
+						yewLocation = 2;
+					if (idx3.contains(a))
+						yewLocation = 3;
+				}
+			}
+		}
 		if (showArea.contains(a))
 			showPaint = !showPaint;
 	}
