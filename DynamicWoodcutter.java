@@ -197,7 +197,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	private final static int[] dropPath1 = { 1, 2, 3, 4, 8, 7, 6, 5, 9, 10, 11, 12, 16, 15, 14, 13, 17, 18, 19, 20, 24,
 	        23, 22, 21, 25, 26, 27, 28 };
 	private final static int[] dropPath2 = { 1, 5, 2, 9, 6, 3, 13, 10, 7, 4, 17, 14, 11, 8, 21, 18, 15, 12, 25, 22, 19,
-	        16, 26, 23, 20, 28 };
+	        16, 26, 23, 20, 27, 24, 28 };
 	private final static int[] dropPath3 = { 1, 5, 9, 13, 17, 21, 25, 2, 6, 10, 14, 18, 22, 26, 3, 7, 11, 15, 19, 23,
 	        27, 4, 8, 12, 16, 20, 24, 28 };
 	private final static int[] dropPath4 = { 4, 3, 2, 1, 5, 6, 7, 8, 12, 11, 10, 9, 13, 14, 15, 16, 20, 19, 18, 17, 21,
@@ -310,7 +310,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					else
 						findNewTile(start, false);
 				if (antibanTimer < System.currentTimeMillis()) {
-					new Camera(Camera.ADVANCED);
+					new Camera(1000, 2000);
 					antibanTimer = System.currentTimeMillis() + random(10000, 25000);
 				}
 				break;
@@ -1579,7 +1579,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	private double getCurrentVersion() {
 		try {
 			final BufferedReader r = new BufferedReader(new InputStreamReader(new URL(
-//			    "https://raw.github.com/hlunnb/DynamicWoodcutter/master/version.txt").openStream()));
 			    "http://pastebin.com/raw.php?i=SePHdUFV").openStream()));
 			final double d = Double.parseDouble(r.readLine());
 			r.close();
@@ -1608,12 +1607,14 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				case 0:
 					currVer = 0;
 					currVer = getCurrentVersion();
+					DecimalFormat format = new DecimalFormat("0.00");
 					if (scriptVersion >= currVer)
-						log(Color.green, "Your version: " + scriptVersion + ", Latest version: " + currVer
-						        + ". Your script is up to date.");
+						log(Color.green, "Your version: " + format.format(scriptVersion) + ", Latest version: "
+						        + format.format(currVer) + ". Your script is up to date.");
 					else
-						log(Color.red, "Your version: " + scriptVersion + ", Latest version: " + currVer
-						        + ". You should get the latest version.");
+						log(Color.red,
+						    "Your version: " + format.format(scriptVersion) + ", Latest version: "
+						            + format.format(currVer) + ". You should get the latest version.");
 					break;
 				case 1:
 					checkedGE = true;
@@ -1653,6 +1654,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		public static final int PITCH = 1;
 		private RSTile r = null;
 		private int antiban = -1;
+		private int min = 500;
+		private int max = 1500;
 		private Camera(final RSObject r) {
 			this.r = r.getLocation();
 			this.start();
@@ -1661,12 +1664,18 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			this.r = r.getLocation();
 			this.start();
 		}
-		Camera(final RSTile r) {
+		private Camera(final RSTile r) {
 			this.r = r;
 			this.start();
 		}
 		private Camera(final int antiban) {
 			this.antiban = antiban;
+			this.start();
+		}
+		private Camera(final int min, final int max) {
+			antiban = ADVANCED;
+			this.min = min;
+			this.max = max;
 			this.start();
 		}
 		@Override
@@ -1682,10 +1691,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 						keyboard.releaseKey((char) KeyEvent.VK_UP);
 					} else
 						camera.turnTo(r, 30);
-				if (this.antiban >= 0 && this.antiban <= 2)
+				if (antiban != -1)
 					switch (antiban) {
 						case ADVANCED:
-							advancedCameraMovement(500, 1500);
+							advancedCameraMovement(min, max);
 							break;
 						case PITCH:
 							if (camera.getPitch() < random(30, 55)) {
@@ -3633,13 +3642,14 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		return true;
 	}
 	private void advancedCameraMovement(int timeOutMin, int timeOutMax) {
-		final int random1 = random(timeOutMin / 3, timeOutMax / 3);
-		final int random2 = random(timeOutMin / 3, timeOutMax / 3);
+		final int random1 = random(timeOutMin / 4, timeOutMax / 4);
+		final int random2 = random(timeOutMin / 4, timeOutMax / 4);
+		final int random3 = random(timeOutMin / 2, timeOutMax / 2);
 		if (random(0, 2) == 0)
 			keyboard.pressKey((char) KeyEvent.VK_RIGHT);
 		else
 			keyboard.pressKey((char) KeyEvent.VK_LEFT);
-		sleep(random(timeOutMin / 3, timeOutMax / 3));
+		sleep(random3);
 		if (random(0, 2) == 0)
 			keyboard.pressKey((char) KeyEvent.VK_UP);
 		else
@@ -3652,10 +3662,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			keyboard.releaseKey((char) KeyEvent.VK_UP);
 			keyboard.releaseKey((char) KeyEvent.VK_DOWN);
 		} else {
-			sleep(random2);
+			sleep(random1);
 			keyboard.releaseKey((char) KeyEvent.VK_UP);
 			keyboard.releaseKey((char) KeyEvent.VK_DOWN);
-			sleep(random1);
+			sleep(random2);
 			keyboard.releaseKey((char) KeyEvent.VK_RIGHT);
 			keyboard.releaseKey((char) KeyEvent.VK_LEFT);
 		}
