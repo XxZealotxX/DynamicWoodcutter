@@ -35,6 +35,7 @@ import org.rsbot.script.methods.Bank;
 import org.rsbot.script.methods.Environment;
 import org.rsbot.script.methods.Game.Tab;
 import org.rsbot.script.methods.GrandExchange;
+import org.rsbot.script.methods.Magic;
 import org.rsbot.script.methods.Magic.Spell;
 import org.rsbot.script.methods.Skills;
 import org.rsbot.script.util.Timer;
@@ -133,7 +134,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	        steelHatchetID, blackHatchetID, mithrilHatchetID, adamantHatchetID, runeHatchetID, notedOakLogs, 13439,
 	        tinderboxID, 14664 }; // Random event lamp 14664, Starter lamp 13439
 	final int[] dontDepositIDs = { bronzeHatchetID, ironHatchetID, steelHatchetID, blackHatchetID, mithrilHatchetID,
-	        adamantHatchetID, runeHatchetID, 14664, tinderboxID }; // TODO Removed 995
+	        adamantHatchetID, runeHatchetID, 14664, tinderboxID };
 	final RSTile[] logStart = { new RSTile(3199, 3243), new RSTile(3199, 3244), new RSTile(3199, 3245),
 	        new RSTile(3199, 3246), new RSTile(3196, 3237), new RSTile(3202, 3236) };
 	final RSTile[] oakStart = { new RSTile(3093, 3288), new RSTile(3093, 3290), new RSTile(3093, 3289),
@@ -158,7 +159,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int oakPrice = -1;
 	boolean checkBank = false;
 	boolean useBank = false;
-	boolean useDeposit = true; // TODO false
+	boolean useDeposit = false;
 	boolean needTutoring = false;
 	String status = "";
 	String antiBan = "";
@@ -249,7 +250,12 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				}
 				RSTile dest = calc.distanceTo(generalStoreTile) < calc.distanceTo(generalStoreTile2) ? dest = generalStoreTile
 				        : generalStoreTile2;
-				if (coins == null || dest.equals(generalStoreTile))
+				if (coins == null || dest.equals(generalStoreTile)) {
+					if (calc.distanceTo(generalStoreTile) > 100) {
+						if (!isAnimated())
+							magic.castSpell(Magic.SPELL_HOME_TELEPORT);
+						return 2000;
+					}
 					if (!generalStoreArea.contains(myLocation())) {
 						webWalk(generalStoreTile);
 						return random(500, 1000);
@@ -263,6 +269,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 							} else
 								new Camera(shopKeeper);
 					}
+				}
 				if (dest.equals(generalStoreTile2)) {
 					if (!generalStoreArea2.contains(myLocation())) {
 						webWalk(generalStoreTile2);
@@ -346,8 +353,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 								return 2000;
 							}
 							if (interfaces.getComponent(762, Bank.INTERFACE_BANK_BUTTON_NOTE).getTextureID() == 1431)
-								interfaces.getComponent(762, Bank.INTERFACE_BANK_BUTTON_NOTE).interact(
-								    "Switch to note withdrawal mode");
+								bank.setWithdrawModeToNote();
 							else {
 								if (bank.getItem(995) != null) {
 									bank.withdraw(995, random(25, 30) * 1000);
@@ -756,6 +762,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	private int dropLogs() {
 		final RSItem[] logs = inventory.getItems(logIDs);
+		if (logs.length == 0)
+			dropLogs = false;
 		if (random(0, 2) == 0)
 			for (int i = random(0, logs.length - 1); i < logs.length && i >= 0; i++) {
 				logs[i].interact("Drop");
@@ -1304,7 +1312,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Returns the <tt>RSObject</tt> that is nearest and a within certain distance away a centre tile.
-	 * 
 	 * @param treeID The array of tree ids.
 	 * @param t The centre tile.
 	 * @param closeDist The maximum distance from the centre tile.
@@ -1711,166 +1718,168 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		final Rectangle aHatchet = new Rectangle(469, 425, 25, 25);
 		final Rectangle checkBankArea = new Rectangle(200, 345, 25, 25);
 		final Point a = e.getPoint();
-		if (!playClicked) {
-			if (indHatchet.contains(a))
-				useAvailableHatchetsSelected = false;
-			if (aHatchet.contains(a))
-				useAvailableHatchetsSelected = true;
-			if (cutYewArea.contains(a))
-				yewsAfter60Selected = !yewsAfter60Selected;
-			if (checkBankArea.contains(a))
-				checkBankSelected = !checkBankSelected;
-			if (clickArea.contains(a)) {
-				playClicked = true;
-				wait = false;
-				globeSelected = false;
-				useAvailableHatchets = useAvailableHatchetsSelected;
-				yewAfter60 = yewsAfter60Selected;
-				checkBank = checkBankSelected;
-			}
-		}
+		if (showPaint) {
+	        if (!playClicked) {
+		        if (indHatchet.contains(a))
+			        useAvailableHatchetsSelected = false;
+		        if (aHatchet.contains(a))
+			        useAvailableHatchetsSelected = true;
+		        if (cutYewArea.contains(a))
+			        yewsAfter60Selected = !yewsAfter60Selected;
+		        if (checkBankArea.contains(a))
+			        checkBankSelected = !checkBankSelected;
+		        if (clickArea.contains(a)) {
+			        playClicked = true;
+			        wait = false;
+			        globeSelected = false;
+			        useAvailableHatchets = useAvailableHatchetsSelected;
+			        yewAfter60 = yewsAfter60Selected;
+			        checkBank = checkBankSelected;
+		        }
+	        }
+	        if (fmArea.contains(a))
+		        trainFM = !trainFM;
+	        if (worldArea.contains(a))
+		        globeSelected = !globeSelected;
+	        if (infoArea.contains(a))
+		        sendToURL("http://goo.gl/WEQX6");
+	        if (settingsArea.contains(a))
+		        playClicked = false;
+	        if (!optionsOpenArea.contains(a) && !worldArea.contains(a))
+		        globeSelected = false;
+	        if (globeSelected) {
+		        if (lockArea.contains(a))
+			        locked = !locked;
+		        if (logArea.contains(a))
+			        if (!treeSelected) {
+				        treeSelected = true;
+				        oakSelected = false;
+				        willowSelected = false;
+				        yewSelected = false;
+			        }
+		        if (oakArea.contains(a))
+			        if (!oakSelected) {
+				        treeSelected = false;
+				        oakSelected = true;
+				        willowSelected = false;
+				        yewSelected = false;
+			        }
+		        if (willowArea.contains(a))
+			        if (!willowSelected) {
+				        treeSelected = false;
+				        oakSelected = false;
+				        willowSelected = true;
+				        yewSelected = false;
+			        }
+		        if (yewArea.contains(a))
+			        if (!yewSelected) {
+				        treeSelected = false;
+				        oakSelected = false;
+				        willowSelected = false;
+				        yewSelected = true;
+			        }
+		        if (treeSelected) {
+			        if (idx1.contains(a))
+				        treeLocation = 1;
+			        if (mode1.contains(a)) {
+				        bankTree = false;
+				        dropTree = false;
+			        }
+			        if (mode2.contains(a)) {
+				        dropTree = true;
+				        bankTree = false;
+			        }
+			        if (mode3.contains(a)) {
+				        bankTree = true;
+				        dropTree = false;
+			        }
+		        }
+		        if (oakSelected) {
+			        if (idx1.contains(a))
+				        oakLocation = 1;
+			        if (idx2.contains(a))
+				        oakLocation = 2;
+			        if (idx3.contains(a))
+				        oakLocation = 3;
+			        if (mode1.contains(a)) {
+				        bankOak = true;
+				        dropOak = false;
+				        powerchopOak = false;
+			        }
+			        if (mode2.contains(a)) {
+				        dropOak = true;
+				        bankOak = false;
+				        powerchopOak = false;
+			        }
+			        if (mode3.contains(a)) {
+				        bankOak = false;
+				        dropOak = false;
+				        powerchopOak = true;
+			        }
+		        }
+		        if (willowSelected) {
+			        if (idx1.contains(a))
+				        willowLocation = 1;
+			        if (idx2.contains(a))
+				        willowLocation = 2;
+			        if (idx3.contains(a))
+				        willowLocation = 3;
+			        if (idx4.contains(a))
+				        willowLocation = 4;
+			        if (willowLocation == 1 || willowLocation == 2) {
+				        if (mode1.contains(a)) {
+					        bankWillow = false;
+					        dropWillow = false;
+					        powerchopWillow = false;
+				        }
+				        if (mode2.contains(a)) {
+					        dropWillow = false;
+					        bankWillow = true;
+					        powerchopWillow = false;
+				        }
+				        if (mode3.contains(a)) {
+					        bankWillow = false;
+					        dropWillow = true;
+					        powerchopWillow = false;
+				        }
+				        if (mode4.contains(a)) {
+					        bankWillow = false;
+					        dropWillow = false;
+					        powerchopWillow = true;
+				        }
+			        }
+			        if (willowLocation == 3 || willowLocation == 4) {
+				        if (mode1.contains(a)) {
+					        dropWillow = false;
+					        bankWillow = true;
+					        powerchopWillow = false;
+				        }
+				        if (mode2.contains(a)) {
+					        bankWillow = false;
+					        dropWillow = true;
+					        powerchopWillow = false;
+				        }
+				        if (mode3.contains(a)) {
+					        bankWillow = false;
+					        dropWillow = false;
+					        powerchopWillow = true;
+				        }
+				        if (!bankWillow && !powerchopWillow && !dropWillow)
+					        bankWillow = true;
+			        }
+		        }
+		        if (yewSelected) {
+			        if (idx1.contains(a))
+				        yewLocation = 1;
+			        if (idx2.contains(a))
+				        yewLocation = 2;
+			        if (idx3.contains(a))
+				        yewLocation = 3;
+		        }
+	        }
+        }
 		if (showArea.contains(a))
 			showPaint = !showPaint;
-		if (fmArea.contains(a))
-			trainFM = !trainFM;
-		if (worldArea.contains(a))
-			globeSelected = !globeSelected;
-		if (infoArea.contains(a))
-			sendToURL("http://goo.gl/WEQX6");
-		if (settingsArea.contains(a))
-			playClicked = false;
-		if (!optionsOpenArea.contains(a) && !worldArea.contains(a))
-			globeSelected = false;
-		if (globeSelected) {
-			if (lockArea.contains(a))
-				locked = !locked;
-			if (logArea.contains(a))
-				if (!treeSelected) {
-					treeSelected = true;
-					oakSelected = false;
-					willowSelected = false;
-					yewSelected = false;
-				}
-			if (oakArea.contains(a))
-				if (!oakSelected) {
-					treeSelected = false;
-					oakSelected = true;
-					willowSelected = false;
-					yewSelected = false;
-				}
-			if (willowArea.contains(a))
-				if (!willowSelected) {
-					treeSelected = false;
-					oakSelected = false;
-					willowSelected = true;
-					yewSelected = false;
-				}
-			if (yewArea.contains(a))
-				if (!yewSelected) {
-					treeSelected = false;
-					oakSelected = false;
-					willowSelected = false;
-					yewSelected = true;
-				}
-			if (treeSelected) {
-				if (idx1.contains(a))
-					treeLocation = 1;
-				if (mode1.contains(a)) {
-					bankTree = false;
-					dropTree = false;
-				}
-				if (mode2.contains(a)) {
-					dropTree = true;
-					bankTree = false;
-				}
-				if (mode3.contains(a)) {
-					bankTree = true;
-					dropTree = false;
-				}
-			}
-			if (oakSelected) {
-				if (idx1.contains(a))
-					oakLocation = 1;
-				if (idx2.contains(a))
-					oakLocation = 2;
-				if (idx3.contains(a))
-					oakLocation = 3;
-				if (mode1.contains(a)) {
-					bankOak = true;
-					dropOak = false;
-					powerchopOak = false;
-				}
-				if (mode2.contains(a)) {
-					dropOak = true;
-					bankOak = false;
-					powerchopOak = false;
-				}
-				if (mode3.contains(a)) {
-					bankOak = false;
-					dropOak = false;
-					powerchopOak = true;
-				}
-			}
-			if (willowSelected) {
-				if (idx1.contains(a))
-					willowLocation = 1;
-				if (idx2.contains(a))
-					willowLocation = 2;
-				if (idx3.contains(a))
-					willowLocation = 3;
-				if (idx4.contains(a))
-					willowLocation = 4;
-				if (willowLocation == 1 || willowLocation == 2) {
-					if (mode1.contains(a)) {
-						bankWillow = false;
-						dropWillow = false;
-						powerchopWillow = false;
-					}
-					if (mode2.contains(a)) {
-						dropWillow = false;
-						bankWillow = true;
-						powerchopWillow = false;
-					}
-					if (mode3.contains(a)) {
-						bankWillow = false;
-						dropWillow = true;
-						powerchopWillow = false;
-					}
-					if (mode4.contains(a)) {
-						bankWillow = false;
-						dropWillow = false;
-						powerchopWillow = true;
-					}
-				}
-				if (willowLocation == 3 || willowLocation == 4) {
-					if (mode1.contains(a)) {
-						dropWillow = false;
-						bankWillow = true;
-						powerchopWillow = false;
-					}
-					if (mode2.contains(a)) {
-						bankWillow = false;
-						dropWillow = true;
-						powerchopWillow = false;
-					}
-					if (mode3.contains(a)) {
-						bankWillow = false;
-						dropWillow = false;
-						powerchopWillow = true;
-					}
-					if (!bankWillow && !powerchopWillow && !dropWillow)
-						bankWillow = true;
-				}
-			}
-			if (yewSelected) {
-				if (idx1.contains(a))
-					yewLocation = 1;
-				if (idx2.contains(a))
-					yewLocation = 2;
-				if (idx3.contains(a))
-					yewLocation = 3;
-			}
-		}
 	}
 	@Override
 	public void mouseClicked(final MouseEvent e) {}
@@ -2499,7 +2508,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	private final String GET = "/m=itemdb_rs/viewitem.ws?obj=";
 	/**
 	 * Buys items from the Grand Exchange if it's open
-	 * 
 	 * @param itemName item to buy
 	 * @param slotNumber slot number to buy from (1-5)
 	 * @param quantity amount to buy
@@ -2640,9 +2648,9 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		return false;
 	}
+	// Credits to Dwarfeh for most of the Grand Exchange methods :)
 	/**
 	 * Sells items to the Grand Exchange if it's open
-	 * 
 	 * @param itemName item to sell
 	 * @param slotNumber slot number to sell from (1-5)
 	 * @param quantity amount to sell
@@ -2751,7 +2759,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Determines membership
-	 * 
 	 * @return <tt>true</tt> if members is selected for the account; otherwise <tt>false</tt>
 	 */
 	public boolean isMember() {
@@ -2759,7 +2766,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Sets the number format as the same as GrandExchange's
-	 * 
 	 * @param money GrandExchange's money
 	 * @return number to match GrandExchange's
 	 */
@@ -2768,7 +2774,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the total slots there are for the person
-	 * 
 	 * @return number of slots if account is member
 	 */
 	public int getTotalSlots() {
@@ -2776,7 +2781,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Checks to see if the GE slot is empty
-	 * 
 	 * @param slot gets the correct interface
 	 * @return <tt>true</tt> if empty; otherwise <tt>false</tt>
 	 */
@@ -2790,7 +2794,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Will determine the total amount of empty slots
-	 * 
 	 * @return total amount of empty slots
 	 */
 	public int getAllEmptySlots() {
@@ -2811,7 +2814,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Checks for nearest empty slot
-	 * 
 	 * @return an empty spot in the GE if there is one. If not, 0
 	 */
 	public int getEmptySlot() {
@@ -2830,7 +2832,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Determines if an offer has completed or not
-	 * 
 	 * @return <tt>true</tt> if an offer is completed; otherwise <tt>false</tt>
 	 */
 	public boolean isAnOfferCompleted() {
@@ -2839,7 +2840,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Determines if there is an item by the name
-	 * 
 	 * @return <tt>true</tt> if an item was found; otherwise <tt>false</tt>
 	 */
 	public boolean findItem() {
@@ -2849,7 +2849,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Determines if the person has searched or not
-	 * 
 	 * @param itemName is defined by buy/sell item
 	 * @return <tt>true</tt> if they have searched; otherwise <tt>false</tt>
 	 */
@@ -2862,7 +2861,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Determines if the player is searching
-	 * 
 	 * @return <tt>true</tt> if interface is valid; otherwise <tt>false</tt>
 	 */
 	public boolean isSearching() {
@@ -2870,7 +2868,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Checks whether the GE is open
-	 * 
 	 * @return <tt>true</tt> if the GE interface is valid; otherwise <tt>false</tt>
 	 */
 	public boolean isOpen() {
@@ -2878,7 +2875,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the bank's interface.
-	 * 
 	 * @return <tt>true</tt> if interface is valid
 	 */
 	public RSInterface getInterface() {
@@ -2886,7 +2882,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the general interface for the slot
-	 * 
 	 * @param slot determines which one to take from
 	 * @return interface for the slot
 	 */
@@ -2896,7 +2891,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the left interface for the slot
-	 * 
 	 * @param slot determines which one to take from
 	 * @return left interface for the slot
 	 */
@@ -2906,7 +2900,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the right interface for the slot
-	 * 
 	 * @param slot determines which one to take from
 	 * @return right interface for the slot
 	 */
@@ -2916,7 +2909,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Collects everything from the interface
-	 * 
 	 * @return <tt>true</tt> if collected all successfully; otherwise <tt>false</tt>
 	 */
 	public boolean bankCollectAll() {
@@ -2925,7 +2917,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Opens collection interface
-	 * 
 	 * @return <tt>true</tt> if opened successfully; otherwise <tt>false</tt>
 	 */
 	public boolean bankCollectOpen() {
@@ -2934,7 +2925,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Closes collection interface
-	 * 
 	 * @return <tt>true</tt> if closed successfully; otherwise <tt>false</tt>
 	 */
 	public boolean bankCollectClose() {
@@ -2943,7 +2933,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Checks collection interface
-	 * 
 	 * @return <tt>true</tt> if opened; otherwise <tt>false</tt>
 	 */
 	public boolean bankCollectIsOpen() {
@@ -2952,7 +2941,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Closes the GE.
-	 * 
 	 * @return <tt>true</tt> if the GE is no longer open; otherwise <tt>false</tt>
 	 */
 	public boolean close() {
@@ -2965,7 +2953,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Opens the GrandExchange
-	 * 
 	 * @return <tt>true</tt> if open; otherwise <tt>false</tt>
 	 */
 	public boolean open() {
@@ -3003,7 +2990,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the name of the given item ID. Should not be used.
-	 * 
 	 * @param itemID The item ID to look for.
 	 * @return The name of the given item ID or an empty String if unavailable.
 	 * @see GrandExchange#lookup(int)
@@ -3016,7 +3002,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Gets the ID of the given item name. Should not be used.
-	 * 
 	 * @param itemName The name of the item to look for.
 	 * @return The ID of the given item name or -1 if unavailable.
 	 * @see GrandExchange#lookup(java.lang.String)
@@ -3029,7 +3014,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Collects data for a given item ID from the Grand Exchange website.
-	 * 
 	 * @param itemID The item ID.
 	 * @return An instance of GrandExchange.GEItem; <code>null</code> if unable to fetch data.
 	 */
@@ -3063,7 +3047,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	/**
 	 * Collects data for a given item name from the Grand Exchange website.
-	 * 
 	 * @param itemName The name of the item.
 	 * @return An instance of GrandExchange.GEItem; <code>null</code> if unable to fetch data.
 	 */
@@ -3132,7 +3115,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the change in price for the last 30 days of this item.
-		 * 
 		 * @return The change in price for the last 30 days of this item.
 		 */
 		public double getChange30Days() {
@@ -3140,7 +3122,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the change in price for the last 90 days of this item.
-		 * 
 		 * @return The change in price for the last 90 days of this item.
 		 */
 		public double getChange90Days() {
@@ -3148,7 +3129,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the change in price for the last 180 days of this item.
-		 * 
 		 * @return The change in price for the last 180 days of this item.
 		 */
 		public double getChange180Days() {
@@ -3156,7 +3136,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the ID of this item.
-		 * 
 		 * @return The ID of this item.
 		 */
 		public int getID() {
@@ -3164,7 +3143,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the market price of this item.
-		 * 
 		 * @return The market price of this item.
 		 */
 		public int getGuidePrice() {
@@ -3172,7 +3150,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the name of this item.
-		 * 
 		 * @return The name of this item.
 		 */
 		public String getName() {
@@ -3180,7 +3157,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		/**
 		 * Gets the description of this item.
-		 * 
 		 * @return The description of this item.
 		 */
 		public String getDescription() {
@@ -3275,7 +3251,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					}
 					for (int j = 0; j < 10 && !bankIsOpen(); j++)
 						sleep(random(100, 200));
-					// Ensures that the widget becomes valid
 					sleep(random(700, 900));
 					return bankIsOpen();
 				} else
