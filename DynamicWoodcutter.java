@@ -133,7 +133,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	        steelHatchetID, blackHatchetID, mithrilHatchetID, adamantHatchetID, runeHatchetID, notedOakLogs, 13439,
 	        tinderboxID, 14664 }; // Random event lamp 14664, Starter lamp 13439
 	final int[] dontDepositIDs = { bronzeHatchetID, ironHatchetID, steelHatchetID, blackHatchetID, mithrilHatchetID,
-	        adamantHatchetID, runeHatchetID, 995, 14664, tinderboxID };
+	        adamantHatchetID, runeHatchetID, 14664, tinderboxID }; // TODO Removed 995
 	final RSTile[] logStart = { new RSTile(3199, 3243), new RSTile(3199, 3244), new RSTile(3199, 3245),
 	        new RSTile(3199, 3246), new RSTile(3196, 3237), new RSTile(3202, 3236) };
 	final RSTile[] oakStart = { new RSTile(3093, 3288), new RSTile(3093, 3290), new RSTile(3093, 3289),
@@ -158,7 +158,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int oakPrice = -1;
 	boolean checkBank = false;
 	boolean useBank = false;
-	boolean useDeposit = false;
+	boolean useDeposit = true; // TODO false
 	boolean needTutoring = false;
 	String status = "";
 	String antiBan = "";
@@ -212,6 +212,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	@Override
 	public void onFinish() {
+		env.enableRandom("Improved Login");
 		scriptRunning = false;
 		log(Color.BLUE, "Thanks for using my script, please leave your feedback on my thread.");
 	}
@@ -313,13 +314,13 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					interfaces.get(230).getComponent(2).doClick();
 					return random(500, 1000);
 				}
-				final RSNPC tutor = npcs.getNearest("Grand Exchange Tutor");
+				final RSNPC tutor = npcs.getNearest(6521);
 				if (tutor.isOnScreen()) {
 					if (tutor.interact("Talk-to"))
 						chill();
 					return 0;
 				} else {
-					webWalk(tutor.getLocation());
+					walking.walkTileMM(tutor.getLocation());
 					return random(500, 1000);
 				}
 			case CHECKBANK:
@@ -337,7 +338,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 							mouse.move(i.getPoint());
 							sleep(100, 200);
 							mouse.click(false);
-							if (menu.clickIndex(menu.getIndex("Bank") + 1))
+							if (menu.contains("Bank") && menu.clickIndex(menu.getIndex("Bank") + 1))
 								return random(1500, 2000);
 						} else if (bank.isOpen()) {
 							if (bank.getItem(runeHatchetID) != null && !inventory.contains(runeHatchetID)) {
@@ -348,10 +349,14 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 								interfaces.getComponent(762, Bank.INTERFACE_BANK_BUTTON_NOTE).interact(
 								    "Switch to note withdrawal mode");
 							else {
-								if (bank.getItem(995) != null)
-									bank.withdraw(995, 30000);
-								if (bank.getItem(oakLogID) != null)
+								if (bank.getItem(995) != null) {
+									bank.withdraw(995, random(25, 30) * 1000);
+									sleep(1000);
+								}
+								if (bank.getItem(oakLogID) != null) {
 									bank.withdraw(oakLogID, 0);
+									sleep(1000);
+								}
 								bank.close();
 							}
 							return random(1200, 1500);
@@ -373,7 +378,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 								mouse.moveSlightly();
 							sleep(random(700, 1000));
 							if (isAnOfferCompleted()) {
-								log("Offer completed");
+								log("Offer completed.");
 								if (isOpen())
 									close();
 								if (!bankCollectIsOpen())
@@ -389,7 +394,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 								mouse.moveSlightly();
 							sleep(random(700, 1000));
 							if (isAnOfferCompleted()) {
-								log("Offer completed");
+								log("Offer completed.");
 								if (isOpen())
 									close();
 								if (!bankCollectIsOpen())
@@ -789,9 +794,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	private int useDeposit() {
 		if (bank.isDepositOpen()) {
-			if (!bank.depositAllExcept(dontDepositIDs))
-				return random(700, 1500);
-			useDeposit = false;
+			if (depositAllExcept(dontDepositIDs))
+				useDeposit = false;
 			return 0;
 		}
 		final RSObject depositBox = objects.getNearest(Bank.DEPOSIT_BOXES);
@@ -805,6 +809,31 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		webWalk(new RSTile(3047, 3235));
 		return random(500, 1000);
+	}
+	private boolean depositAllExcept(int[] ids) {
+		int money = inventory.contains(995) ? inventory.getItem(995).getStackSize() : 0;
+		RSItem deposit = null;
+		outer: for (RSItem r : inventory.getItems()) {
+			for (int i : ids) {
+				if (r.getID() == i) {
+					continue outer;
+				}
+			}
+			if (!r.hasAction("Drop")) {
+				continue;
+			} else if (deposit == null || r.getID() != deposit.getID()) {
+				deposit = r;
+				if (bank.deposit(deposit.getID(), 0)) {
+					if (deposit.getID() == 995)
+						bankCash += money;
+					sleep(random(300, 500));
+				}
+				continue outer;
+			}
+		}
+		if (deposit == null)
+			return true;
+		return false;
 	}
 	private int checkStuff() {
 		if (game.getClientState() == 11 && interfaces.get(137).isValid()) {
@@ -845,6 +874,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			return 100;
 		}
 		if (end) {
+			env.disableRandom("Improved Login");
 			if (game.logout(false))
 				stopScript(true);
 			return 1000;
@@ -899,29 +929,36 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			run = random(5, 30);
 			sleep(500, 800);
 		}
-		if (myLocation().getZ() > 0) {
+		if (myLocation().getZ() != 0) {
 			final int myFloor = myLocation().getZ();
 			log("How did you get up there?");
 			int dist = 20;
 			RSObject stairs = null;
-			for (final RSObject o : objects.getAll())
-				if (o.hasAction("Climb-down") && o.getLocation().getZ() == myFloor)
+			for (final RSObject o : objects.getAll(2348, 9471, 9559, 36769, 36770, 36774, 36775, 36777, 36778, 39329,
+			    40059, 45482, 45484, 55450))
+				if (o.getLocation().getZ() == myFloor) {
 					if (calc.distanceTo(o) < dist) {
 						dist = calc.distanceTo(o);
 						stairs = o;
-						continue;
 					}
+				}
 			if (stairs == null) {
 				log("There is no way to get down.");
 				end = true;
 				return 0;
 			}
 			if (calc.tileOnScreen(stairs.getLocation())) {
-				if (stairs.interact("Climb-down")) {
-					log("Climbing down...");
+				mouse.move(stairs.getPoint());
+				if (stairs.hasAction("Climb-up") && myLocation().getZ() < 0) {
+					stairs.interact("Climb-up");
+				} else if (stairs.hasAction("Climb-down") && myLocation().getZ() > 0) {
+					stairs.interact("Climb-down");
+				} else if (stairs.doClick()) {
+					log("Climbing...");
 					chill();
+					sleep(2000);
 				} else
-					return 0;
+					end = true;
 			} else {
 				walking.walkTileMM(stairs.getLocation());
 				chill();
@@ -972,13 +1009,18 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				return;
 			}
 		}
-		if (walkWeb != null)
+		if (walkWeb != null) {
 			if (!getMyPlayer().isMoving() || calc.distanceTo(walking.getDestination()) < 5) {
 				walkWeb.step();
 				if (calc.distanceTo(dest) <= 5)
 					walking.walkTileMM(walkWeb.getEnd());
 				antiBan();
 			}
+		} else {
+			if (calc.distanceTo(walking.getDestination()) <= 5) {
+				walking.walkTileMM(dest);
+			}
+		}
 	}
 	private RSTile myLocation() {
 		return getMyPlayer().getLocation();
@@ -1424,7 +1466,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	private int handleCoins() {
 		if (!isAnimated() && (bestHatchetAvailable == -1 || bestHatchetAvailable == bronzeHatchetID)) {
-			final RSGroundItem coins = groundItems.getNearest("Coins");
+			final RSGroundItem coins = groundItems.getNearest(995);
 			if (coins != null
 			        && calc.distanceTo(coins.getLocation()) < 20
 			        && (inventory.getItem(995) == null || inventory.getItem(995) != null
@@ -1518,7 +1560,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 
 	class Camera extends Thread {
 		public static final int ADVANCED = 0;
-		public static final int PITCH = 1; // TODO
+		public static final int PITCH = 1;
 		private RSTile r = null;
 		private int antiban = -1;
 		private Camera(final RSObject r) {
@@ -2330,9 +2372,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				g.setColor(Color.BLACK);
 			}
 			if (totalCash > 1000000)
-				g.drawString("Available wealth: " + Integer.toString(totalCash / 1000000) + "m", 345, 305);
+				g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100000) / 10d) + "m", 345,
+				    305);
 			else if (totalCash > 1000)
-				g.drawString("Available wealth: " + Integer.toString(totalCash / 1000) + "k", 345, 305);
+				g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100) / 10d) + "k", 345, 305);
 			else
 				g.drawString("Available wealth: " + Integer.toString(totalCash), 345, 305);
 			g.drawString(levelsGained + " levels" + ", " + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP)
@@ -2471,9 +2514,9 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		for (int i = 0; i < Sep.length;) {
 			if (!Sep[i].contains("("))
 				if (searchName == null)
-					searchName = Sep[i];
+					searchName = Sep[i].toLowerCase(Locale.ENGLISH);
 				else
-					searchName += " " + Sep[i];
+					searchName += " " + Sep[i].toLowerCase(Locale.ENGLISH);
 			i++;
 		}
 		if (slotNumber == 0 || slotNumber > 5)
