@@ -829,11 +829,14 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			RSItem log = inventory.getItemAt(i - 1);
 			for (int id : logIDs) {
 				if (log.getID() == id) {
-					log.interact("Drop");
-					sleep(random(50, 100));
+					while (log != null && !log.interact("Drop")) // TODO
+						log = inventory.getItemAt(i - 1);
+					sleep(random(10, 30));
 				}
 			}
 		}
+		if (inventory.getCount(logIDs) < 3)
+			dropLogs = false;
 		return random(200, 500);
 	}
 	private int walkToGE() {
