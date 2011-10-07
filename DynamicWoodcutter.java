@@ -1,4 +1,3 @@
-
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -1466,7 +1465,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	private double getCurrentVersion() {
 		try {
 			final BufferedReader r = new BufferedReader(new InputStreamReader(new URL(
-			    "http://pastebin.com/raw.php?i=SePHdUFV").openStream()));
+			    "https://raw.github.com/hlunnb/DynamicWoodcutter/master/version.txt").openStream()));
 			final double d = Double.parseDouble(r.readLine());
 			r.close();
 			return d;
