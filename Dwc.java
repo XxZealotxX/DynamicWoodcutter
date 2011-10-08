@@ -147,7 +147,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	final RSTile[] willowPortStart = { new RSTile(3061, 3253), new RSTile(3061, 3254), new RSTile(3068, 3274),
 	        new RSTile(3068, 3275), new RSTile(3068, 3276) };
 	final RSTile[] willowDrayStart = { new RSTile(3113, 3239), new RSTile(3108, 3238), new RSTile(3101, 3248),
-	        new RSTile(3105, 3249), new RSTile(3105, 3250), new RSTile(3112, 3251) }; // TODO
+	        new RSTile(3105, 3249), new RSTile(3105, 3250), new RSTile(3112, 3251) };
 	RSTile[] start;
 	final int[] treeID = { 38782, 38783, 38784, 38785, 38786, 38787, 38788, 38760 };
 	final int[] oakID = { 38731, 38732 };
@@ -3113,9 +3113,8 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 			if (!i.isValid())
 				return false;
 			mouse.move(i.getPoint());
-			sleep(100, 200);
 			mouse.click(false);
-			// i.interact("Exchange ")
+			// i.interact("Exchange ") // TODO Clicked Talk-to
 			if (menu.clickIndex(menu.getIndex("Exchange") + 1)) {
 				if (calc.distanceTo(i) > 1) {
 					final long time = System.currentTimeMillis();
@@ -3385,8 +3384,8 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				if (!i.isValid())
 					return false;
 				mouse.move(i.getPoint());
-				sleep(100, 200);
 				mouse.click(false);
+				// TODO Interact clicked wrong menu item.
 				if (menu.clickIndex(menu.getIndex("Collect"))) {
 					if (calc.distanceTo(i) > 1) {
 						final long time = System.currentTimeMillis();
