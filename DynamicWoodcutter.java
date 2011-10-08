@@ -140,12 +140,14 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	final RSTile[] oakStart = { new RSTile(3093, 3288), new RSTile(3093, 3290), new RSTile(3093, 3289),
 	        new RSTile(3106, 3273), new RSTile(3118, 3263), new RSTile(3105, 3249), new RSTile(3105, 3250),
 	        new RSTile(3101, 3248) };
-	final RSTile[] willowStartRimm = { new RSTile(2968, 3194), new RSTile(2968, 3193), new RSTile(2976, 3192),
+	final RSTile[] willowRimmStart = { new RSTile(2968, 3194), new RSTile(2968, 3193), new RSTile(2976, 3192),
 	        new RSTile(2968, 3199), new RSTile(2968, 3200), new RSTile(2960, 3199) };
-	final RSTile[] willowStartLumb = { new RSTile(3199, 3243), new RSTile(3199, 3244), new RSTile(3199, 3245),
+	final RSTile[] willowLumbStart = { new RSTile(3199, 3243), new RSTile(3199, 3244), new RSTile(3199, 3245),
 	        new RSTile(3199, 3246), new RSTile(3183, 3275), new RSTile(3183, 3276) };
-	final RSTile[] willowStartPort = { new RSTile(3061, 3253), new RSTile(3061, 3254), new RSTile(3068, 3274),
+	final RSTile[] willowPortStart = { new RSTile(3061, 3253), new RSTile(3061, 3254), new RSTile(3068, 3274),
 	        new RSTile(3068, 3275), new RSTile(3068, 3276) };
+	final RSTile[] willowDrayStart = { new RSTile(3113, 3239), new RSTile(3108, 3238), new RSTile(3101, 3248),
+	        new RSTile(3105, 3249), new RSTile(3105, 3250), new RSTile(3112, 3251) }; // TODO
 	RSTile[] start;
 	final int[] treeID = { 38782, 38783, 38784, 38785, 38786, 38787, 38788, 38760 };
 	final int[] oakID = { 38731, 38732 };
@@ -178,10 +180,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	long antibanTimer = 0;
 	long timer2;
 	long clickTimer = 1000000000000000l;
-	int levelsGained = 0;
-	int levelsGained2 = 0;
 	int initialXP = -1;
 	int initialXP2 = -1;
+	int initialLevel = -1;
+	int initialLevel2 = -1;
 	boolean wasLoggedOut = false;
 	double scriptVersion = DynamicWoodcutter.class.getAnnotation(ScriptManifest.class).version();
 	double currVer = -1;
@@ -309,10 +311,9 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					if (inventory.getCount(regularLogID, oakLogID, willowLogID, yewLogID) == 1)
 						return random(1600, 1700);
 				} else if (isIdle())
-					if (inventory.getCount(regularLogID, oakLogID, willowLogID, yewLogID) < 4)
+					if (inventory.getCount(regularLogID, oakLogID, willowLogID, yewLogID) < 4
+					        || !findNewTile(start, false))
 						burnLogs = false;
-					else
-						findNewTile(start, false);
 				if (antibanTimer < System.currentTimeMillis()) {
 					new Camera(1000, 2000);
 					antibanTimer = System.currentTimeMillis() + random(10000, 25000);
@@ -555,7 +556,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					if (store.isOpen())
 						return useStore();
 					if (trainFM) {
-						start = willowStartLumb;
+						start = willowLumbStart;
 						burnLogs = true;
 						findNewTile(start, false);
 						return 0;
@@ -590,7 +591,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					if (store.isOpen())
 						return useStore();
 					if (trainFM) {
-						start = willowStartRimm;
+						start = willowRimmStart;
 						burnLogs = true;
 						findNewTile(start, false);
 						return 0;
@@ -636,7 +637,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					return dropLogs();
 				if (inventory.isFull()) {
 					if (trainFM) {
-						start = willowStartPort;
+						start = willowPortStart;
 						burnLogs = true;
 						findNewTile(start, true);
 						return 0;
@@ -658,7 +659,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					return dropLogs();
 				if (inventory.isFull()) {
 					if (trainFM) {
-						start = oakStart;
+						start = willowDrayStart;
 						burnLogs = true;
 						findNewTile(start, true);
 						return 0;
@@ -670,7 +671,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					checkBank = true;
 					return 0;
 				}
-				return chopTree(30, 20, willowTreeTile4, "Willow", willowID);
+				return chopTree(15, 15, willowTreeTile4, "Willow", willowID);
 			case YEW:
 				useBank = true; // Always bank Yew logs.
 				if (inventory.isFull()) {
@@ -750,8 +751,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 							walking.walkTileMM(door.getLocation());
 							return random(500, 1700);
 						}
-					webWalk(new RSTile(3230, 3240, 0));
-					sleep(random(500, 1000));
 				}
 				if (downLadder != null) {
 					if (downLadder.isOnScreen()) {
@@ -764,6 +763,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					chill();
 					return 1000;
 				}
+				webWalk(new RSTile(3226, 3240, 0));
+				sleep(random(500, 1000));
 				break;
 		} // end of switch
 		return random(300, 500);
@@ -923,6 +924,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			if (initialXP == -1) {
 				initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
 				initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
+				initialLevel = wcLvl();
+				initialLevel2 = fmLvl();
 				startTime = System.currentTimeMillis();
 				antibanTimer = startTime + random(5000, 10000);
 				status = "";
@@ -950,8 +953,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			antibanTimer = startTime + random(5000, 10000);
 			initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
 			initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
-			levelsGained = 0;
-			levelsGained2 = 0;
+//			levelsGained = 0;
+//			levelsGained2 = 0;
 			return 100;
 		}
 		if (end) {
@@ -970,7 +973,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			}
 			if (!r.hasAction("Drop") || r.getName().toLowerCase().contains("hatchet"))
 				continue;
-			for (final int h : dontDropIDs) { // TODO
+			for (final int h : dontDropIDs) {
 				if (r.getID() == h)
 					continue outer;
 			}
@@ -992,7 +995,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		if (!checkBank && !store.isOpen() && !bank.isOpen() && !bank.isDepositOpen()) {
 			bestHatchetAvailable = bestHatchetAvailable();
 			for (int i : hatchetIDs)
-				if (!useAvailableHatchets && i != bestHatchetAvailable && inventory.contains(i)) // TODO good?
+				if (!useAvailableHatchets && i != bestHatchetAvailable && inventory.contains(i))
 					inventory.dropItem(i);
 		}
 		if (!walking.isRunEnabled() && run < walking.getEnergy()) {
@@ -1089,12 +1092,12 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			if (!getMyPlayer().isMoving() || calc.distanceTo(walking.getDestination()) < 5) {
 				walkWeb.step();
 				if (calc.distanceTo(dest) <= 5)
-					walking.walkTileMM(walkWeb.getEnd());
+					walking.walkTileMM(walkWeb.getEnd().randomize(2, 2));
 				antiBan();
 			}
 		} else {
 			if (calc.distanceTo(walking.getDestination()) <= 5) {
-				walking.walkTileMM(dest);
+				walking.walkTileMM(dest.randomize(2, 2));
 			}
 		}
 	}
@@ -1121,6 +1124,9 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			if (banker.isOnScreen()) {
 				mouse.move(banker.getPoint());
 				mouse.click(false);
+				sleep(random(10, 40));
+				if (!menu.contains("Bank"))
+					mouse.moveRandomly(200);
 				if (menu.contains("Bank") && !menu.clickIndex(menu.getIndex("Bank") + 1))
 					return 0;
 			} else {
@@ -1204,7 +1210,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	/**
 	 * @author hlunnb
 	 * @param farDist The distance away from the centre where web walking is used to get back.
-	 * @param closeDist The distance away from the centre where it will click the centre and wait until it walks back.
+	 * @param closeDist The distance away from the centre where it will click the centre and wait until it walks back,
+	 * trees should be inside this area.
 	 * @param t The centre tile.
 	 * @param treeName The name of the tree. "Willow"
 	 * @param treeID An array tree IDs
@@ -1481,8 +1488,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		return true;
 	}
 	/**
-	 * @param r An array of starting tiles
-	 * @param p Use priority method
+	 * @param r An array of starting tiles.
+	 * @param p True to use priority, false to use closest method.
 	 */
 	private boolean findNewTile(final RSTile[] r, final boolean p) {
 		if (!p) {
@@ -1493,20 +1500,19 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 						dest = t;
 						dist = calc.distanceTo(t);
 					}
-			if (dest != null)
-				return true;
-			else
-				return false;
-		}
-		if (p)
+		} else
 			for (final RSTile t : start)
 				if (isTileFree(t)) {
+					RSTile alt = start[random(0, start.length)];
+					if (t == start[0] && random(0, 5) == 0 && isTileFree(alt)) {
+						dest = alt;
+						break;
+					}
 					dest = t;
-					return true;
 				}
 		if (dest == null)
 			return false;
-		return false;
+		return true;
 	}
 	private int walkDest() {
 		if (myLocation().equals(dest) && !getMyPlayer().isMoving()) {
@@ -2008,16 +2014,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	public void messageReceived(final MessageEvent e) {
 		final String m = e.getMessage();
 		if (e.getID() == MessageEvent.MESSAGE_ACTION || e.getID() == MessageEvent.MESSAGE_SERVER) {
-			if (m.contains("just advanced a Firemaking"))
-				levelsGained2++;
-			if (m.contains("just advanced a Woodcutting"))
-				levelsGained++;
-			if (m.contains("just advanced 2 Wood"))
-				levelsGained += 2;
-			if (m.contains("just advanced 3 Wood"))
-				levelsGained += 3;
-			if (m.contains("just advanced 4 Wood"))
-				levelsGained += 4;
 			if (m.contains("can't light a fire"))
 				findNewTile(start, false);
 			if (m.contains("the ladder has been completely destroyed"))
@@ -2506,8 +2502,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					g.setFont(arialL);
 					g.setColor(Color.BLACK);
 					g.drawString(Integer.toString(fmLvl()) + " FM", x + 75, y - 63);
-					g.drawString(levelsGained2 + " levels, " + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2)
-					        + " xp", x + 5, y - 42);
+					g.drawString(fmLvl() - initialLevel2 + " levels, "
+					        + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) + " xp", x + 5, y - 42);
 					g.drawString(
 					    (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) * 3600D
 					            / (System.currentTimeMillis() - startTime) * 10)
@@ -2543,8 +2539,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 					    x + 5, y + 63);
 				else
 					g.drawString("Available wealth: " + Integer.toString(totalCash), x + 5, y + 63);
-				g.drawString(levelsGained + " levels" + ", " + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP)
-				        + " xp", x + 5, y + 78);
+				g.drawString(wcLvl() - initialLevel + " levels" + ", "
+				        + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) + " xp", x + 5, y + 78);
 				g.drawString(
 				    (double) Math.round((skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) * 3600D
 				            / (System.currentTimeMillis() - startTime) * 10)
@@ -3815,6 +3811,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 						return State.WILLOWLUMB;
 					if (willowLocation == 3)
 						return State.WILLOWPORT;
+					if (willowLocation == 4)
+						return State.WILLOWDRAY;
 				}
 			if (fmLvl() >= 15) {
 				if (wcLvl() < 15 && (!locked || locked && treeSelected)) {
