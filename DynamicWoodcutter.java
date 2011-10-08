@@ -993,7 +993,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		if (!checkBank && !store.isOpen() && !bank.isOpen() && !bank.isDepositOpen()) {
 			bestHatchetAvailable = bestHatchetAvailable();
 			for (int i : hatchetIDs)
-				if (i != bestHatchetAvailable && inventory.contains(i) && i != adamantHatchetID) // TODO not useavailable hatchets
+				if (!useAvailableHatchets && i != bestHatchetAvailable && inventory.contains(i)) // TODO good?
 					inventory.dropItem(i);
 		}
 		if (!walking.isRunEnabled() && run < walking.getEnergy()) {
@@ -1117,13 +1117,12 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	}
 	private int useDraynorBank() {
 		final RSNPC banker = npcs.getNearest(Bank.BANKERS);
-		if (!bank.isOpen() && banker != null && banker.isOnScreen()) {
+		if (!bank.isOpen() && banker != null) {
 			if (banker.isOnScreen()) {
 				mouse.move(banker.getPoint());
 				mouse.click(false);
 				if (menu.contains("Bank") && !menu.clickIndex(menu.getIndex("Bank") + 1))
 					return 0;
-				chill();
 			} else
 				walking.walkTileMM(banker.getLocation());
 			// banker.interact("Talk-to"); // TODO ... "Bank" clicks "Talk-to"
@@ -2077,7 +2076,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		minutes = millis / (1000 * 60);
 		millis -= minutes * (1000 * 60);
 		seconds = millis / 1000;
-		if (!interfaces.get(137).isValid() || game.getClientState() != 11) {
+		if (interfaces.get(137).isValid() || game.getClientState() == 11) {
 			if (globeSelected) {
 				if (treeSelected) {
 					g.setColor(colorBlack); // Largest box
