@@ -3538,7 +3538,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 			return 2; // Check skill
 		k += 2;
 		if (num >= k && num < k + 5)
-			return 3; // Examine
+			return 3; // Examine/Misc
 		return -1;
 	}
 	/**
@@ -3696,10 +3696,10 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		else
 			keyboard.pressKey((char) KeyEvent.VK_LEFT);
 		sleep(random3);
-		if (random(0, 2) == 0)
-			keyboard.pressKey((char) KeyEvent.VK_UP);
-		else
+		if (random(0, 4) == 0)
 			keyboard.pressKey((char) KeyEvent.VK_DOWN);
+		else
+			keyboard.pressKey((char) KeyEvent.VK_UP);
 		if (random(0, 2) == 0) {
 			sleep(random1);
 			keyboard.releaseKey((char) KeyEvent.VK_RIGHT);
