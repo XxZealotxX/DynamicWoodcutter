@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
+import org.rsbot.Configuration;
 import org.rsbot.event.events.MessageEvent;
 import org.rsbot.event.listeners.MessageListener;
 import org.rsbot.event.listeners.PaintListener;
@@ -3116,22 +3117,9 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 			mouse.click(false);
 			// i.interact("Exchange ") // TODO Clicked Talk-to
 			if (menu.clickIndex(menu.getIndex("Exchange") + 1)) {
-				if (calc.distanceTo(i) > 1) {
-					final long time = System.currentTimeMillis();
-					final int max = random(2000, 4000);
-					while (System.currentTimeMillis() - time < max) {
-						if (players.getMyPlayer().isMoving()) {
-							do
-								sleep(random(5, 15));
-							while (players.getMyPlayer().isMoving() || !i.isOnScreen());
-							break;
-						}
-						sleep(random(5, 15));
-					}
-				}
+				chill();
 				for (int j = 0; j < 10 && !isOpen(); j++)
 					sleep(random(100, 200));
-				// Ensures that the widget becomes valid
 				sleep(random(700, 900));
 				return isOpen();
 			} else
@@ -3437,9 +3425,11 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		}
 		public boolean bankClose() {
 			if (bankIsOpen()) {
-				interfaces.getComponent(COLLECT_INTERFACE, COLLECT_CLOSE).doClick();
-				sleep(random(700, 900));
+				if (!interfaces.getComponent(COLLECT_INTERFACE, COLLECT_CLOSE).doClick()) {
+					return false;
+				}
 			}
+			sleep(random(700, 900));
 			return true;
 		}
 	}
@@ -3520,10 +3510,10 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	}
 	private BufferedImage getImage(final String fileName, final String imageURL) {
 		try {
-			final File dir = new File(getCacheDirectory() + File.separator);
+			final File dir = new File(Configuration.Paths.getScriptCacheDirectory(), "DynamicWoodcutter"); // TODO
 			if (!dir.exists())
 				dir.mkdir();
-			final File f = new File(getCacheDirectory() + File.separator + fileName);
+			final File f = new File(dir + File.separator + fileName);
 			if (!f.exists()) {
 				BufferedImage image = null;
 				final URL url = new URL(imageURL);
