@@ -187,7 +187,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	double currVer = -1;
 	boolean loading = false;
 	final Timer dotTimer = new Timer(200);
-	final Timer screenShot = new Timer(7200000);
+	final Timer screenshotTimer = new Timer(7200000);
 	final Timer dropTimer = new Timer(1300);
 	Timer rpTimer = null;
 	boolean wait = true;
@@ -929,30 +929,29 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				showPaint = true;
 			}
 			if (wasLoggedOut) {
-				sleep(2000);
 				showPaint = true;
 				wasLoggedOut = false;
 				return 0;
 			}
 		} else {
+			if (showPaint)
+				wasLoggedOut = true;
 			showPaint = false;
-			wasLoggedOut = true;
 			return 0;
 		}
-		if (screenShot != null && !screenShot.isRunning()) {
+		if (screenshotTimer != null && !screenshotTimer.isRunning()) {
 			log("Taking screenshot.");
 			env.saveScreenshot(true);
-			screenShot.reset();
+			screenshotTimer.reset();
 		}
 		if (wait) {
-			status = "Waiting" + dots;
+			status = "Waiting" + manageDots();
 			startTime = System.currentTimeMillis();
 			antibanTimer = startTime + random(5000, 10000);
 			initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
 			initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
 			levelsGained = 0;
 			levelsGained2 = 0;
-			manageDots();
 			return 100;
 		}
 		if (end) {
@@ -1043,7 +1042,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		}
 		return -1;
 	}
-	private void manageDots() {
+	private String manageDots() {
 		if (!dotTimer.isRunning()) {
 			dotTimer.reset();
 			if (dots.length() >= 3)
@@ -1051,6 +1050,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			else
 				dots = dots + ".";
 		}
+		return dots;
 	}
 	private void webWalk(final RSTile dest) {
 		RSWeb walkWeb = null;
@@ -1123,8 +1123,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				mouse.click(false);
 				if (menu.contains("Bank") && !menu.clickIndex(menu.getIndex("Bank") + 1))
 					return 0;
-			} else
+			} else {
+				new Camera(banker);
 				walking.walkTileMM(banker.getLocation());
+			}
 			// banker.interact("Talk-to"); // TODO ... "Bank" clicks "Talk-to"
 			chill();
 			return 0;
@@ -1861,7 +1863,11 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			if (infoArea.contains(a))
 				sendToURL("http://goo.gl/WEQX6");
 			if (settingsArea.contains(a))
-				playClicked = false;
+				if (!showSettings) {
+					playClicked = false;
+					showSettings = true;
+				} else
+					showSettings = false;
 			if (globeSelected) {
 				if (lockArea.contains(a))
 					locked = !locked;
@@ -2056,6 +2062,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	boolean playSelected = false;
 	boolean playClicked = false;
 	boolean settingsSelected = false;
+	boolean showSettings = true;
 	boolean locked = false;
 	boolean checkBankSelected = false;
 	boolean yewsAfter60Selected = false;
@@ -2409,32 +2416,34 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			else
 				g.drawImage(imgSettings, 490, 86, null);
 			if (!playClicked) {
-				g.drawImage(optionsBackground, 0, 338, null);
-				g.setFont(dotum);
-				g.setColor(Color.BLACK);
-				g.drawString("Cut Yews after 60 WC.", 338, 362);
-				if (yewsAfter60Selected)
-					g.drawImage(imgTickSelected, 469, 345, null);
-				else
-					g.drawImage(imgTick, 469, 345, null);
-				g.drawString("Use available hatchets.", 334, 442);
-				g.drawString("Obtain hatchets independently.", 290, 412);
-				if (useAvailableHatchetsSelected) {
-					g.drawImage(imgTickSelected, 469, 425, null);
-					g.drawImage(imgTick, 469, 395, null);
-				} else {
-					g.drawImage(imgTickSelected, 469, 395, null);
-					g.drawImage(imgTick, 469, 425, null);
+				if (showSettings) {
+					g.drawImage(optionsBackground, 0, 338, null);
+					g.setFont(dotum);
+					g.setColor(Color.BLACK);
+					g.drawString("Cut Yews after 60 WC.", 338, 362);
+					if (yewsAfter60Selected)
+						g.drawImage(imgTickSelected, 469, 345, null);
+					else
+						g.drawImage(imgTick, 469, 345, null);
+					g.drawString("Use available hatchets.", 334, 442);
+					g.drawString("Obtain hatchets independently.", 290, 412);
+					if (useAvailableHatchetsSelected) {
+						g.drawImage(imgTickSelected, 469, 425, null);
+						g.drawImage(imgTick, 469, 395, null);
+					} else {
+						g.drawImage(imgTickSelected, 469, 395, null);
+						g.drawImage(imgTick, 469, 425, null);
+					}
+					g.drawString("Force one bank.", 10, 362);
+					if (checkBankSelected)
+						g.drawImage(imgTickSelected, 200, 345, null);
+					else
+						g.drawImage(imgTick, 200, 345, null);
 				}
 				if (playSelected)
 					g.drawImage(imgPlaySelected, 240, 150, null);
 				else
 					g.drawImage(imgPlay, 240, 150, null);
-				g.drawString("Force one bank.", 10, 362);
-				if (checkBankSelected)
-					g.drawImage(imgTickSelected, 200, 345, null);
-				else
-					g.drawImage(imgTick, 200, 345, null);
 			}
 			mp.drawPaint(g);
 		}
@@ -3782,11 +3791,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			}
 			bestHatchetAvailable = bestHatchetAvailable();
 			final RSItem r = inventory.getItem(bestHatchetAvailable);
-			if (bestHatchetAvailable != -1)
-				if (r == null) {
-					status = "Upgrading Hatchet";
-					return State.CHECKBANK;
-				}
+			if (bestHatchetAvailable != -1 && r == null) {
+				status = "Upgrading Hatchet";
+				return State.CHECKBANK;
+			}
 			if (checkedBank && bestHatchetAvailable == -1) {
 				log("No hatchet available in your bank or inventory for your level.");
 				end = true;
@@ -3822,8 +3830,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				status = "Burn Trees";
 				return State.TREE;
 			}
-			status = "Option unavailable" + dots;
-			manageDots();
+			status = "Option unavailable" + manageDots();
 			return State.error;
 		}
 		if (wcLvl() >= 30 && (!locked || locked && willowSelected)) {
@@ -3919,8 +3926,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			}
 			return State.TREE;
 		}
-		status = "Option unavailable" + dots;
-		manageDots();
+		status = "Option unavailable" + manageDots();
 		return State.error;
 	}
 }
