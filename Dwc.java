@@ -54,7 +54,7 @@ import org.rsbot.script.wrappers.RSWeb;
 @ScriptManifest(website = "http://goo.gl/WEQX6", authors = { "hlunnb" }, keywords = { "Woodcutting, Firemaking" },
         name = "Dynamic Woodcutter", version = 1.83,
         description = "Independently trains Woodcutting and Firemaking from a low level.")
-public class DynamicWoodcutter extends Script implements PaintListener, MouseListener, MouseMotionListener, MessageListener {
+public class Dwc extends Script implements PaintListener, MouseListener, MouseMotionListener, MessageListener {
 	final RSArea adviserHouse = new RSArea(new RSTile(3229, 3236), new RSTile(3232, 3241));
 	final RSArea bobsArea = new RSArea(new RSTile(3227, 3201), new RSTile(3233, 3205));
 	final RSTile bobsTile = new RSTile(3230, 3203);
@@ -185,7 +185,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int initialLevel = -1;
 	int initialLevel2 = -1;
 	boolean wasLoggedOut = false;
-	double scriptVersion = DynamicWoodcutter.class.getAnnotation(ScriptManifest.class).version();
+	double scriptVersion = Dwc.class.getAnnotation(ScriptManifest.class).version();
 	double currVer = -1;
 	boolean loading = false;
 	final Timer dotTimer = new Timer(200);
