@@ -168,7 +168,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	boolean sawLamp = false;
 	boolean burnLogs = false;
 	boolean trainFM = false;
-	boolean globeHovered = false;
 	boolean trainFMHovered = false;
 	RSItem dontClick = null;
 	RSTile dest = null;
@@ -197,7 +196,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	boolean dropLogs;
 	boolean scriptRunning = true;
 	boolean moving = false;
-	MasterPaint mp;
+	Paint mp;
 	private final static int[] dropPath1 = { 1, 2, 3, 4, 8, 7, 6, 5, 9, 10, 11, 12, 16, 15, 14, 13, 17, 18, 19, 20, 24,
 	        23, 22, 21, 25, 26, 27, 28 };
 	private final static int[] dropPath2 = { 1, 5, 2, 9, 6, 3, 13, 10, 7, 4, 17, 14, 11, 8, 21, 18, 15, 12, 25, 22, 19,
@@ -217,7 +216,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	public boolean onStart() {
 		mouse.setSpeed(6);
 		new PaintUpdater();
-		mp = new MasterPaint();
+		mp = new Paint();
 		return true;
 	}
 	@Override
@@ -835,7 +834,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			for (int id : logIDs) {
 				if (log.getID() == id) {
 					while (log != null && !log.interact("Drop"))
-						// TODO
+						// TODO Does it work well?
 						log = inventory.getItemAt(i - 1);
 					sleep(random(10, 30));
 				}
@@ -1777,7 +1776,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		if (moving) {
 			mp.x = e.getX() - mp.xLoc;
 			mp.y = e.getY() - mp.yLoc;
-			mp.moveBox = new Rectangle(mp.x, mp.y, 176, 96);
 		}
 		moving = false;
 	}
@@ -1793,6 +1791,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		final Rectangle settingsArea = new Rectangle(490, 86, 25, 25);
 		final Rectangle fmArea = new Rectangle(490, 32, 25, 25);
 		final Rectangle worldArea = new Rectangle(490, 5, 25, 25);
+		final Rectangle optionsOpenArea = new Rectangle(285, 0, 205, 110);
 		final Point a = e.getPoint();
 		if (infoArea.contains(a))
 			infoSelected = true;
@@ -1811,14 +1810,13 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		else
 			trainFMHovered = false;
 		if (worldArea.contains(a))
-			globeHovered = true;
-		else
-			globeHovered = false;
+			globeSelected = true;
+		else if (!optionsOpenArea.contains(a))
+			globeSelected = false;
 	}
 	public void mousePressed(final MouseEvent e) {
 		final Rectangle showArea = new Rectangle(mp.x + 142, mp.y + 77, 34, 19);
 		final Rectangle fmArea = new Rectangle(490, 32, 25, 25);
-		final Rectangle worldArea = new Rectangle(490, 5, 25, 25);
 		final Rectangle lockArea = new Rectangle(462, 5, 24, 24);
 		final Rectangle infoArea = new Rectangle(490, 59, 25, 25);
 		final Rectangle settingsArea = new Rectangle(490, 86, 25, 25);
@@ -1835,14 +1833,13 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		final Rectangle mode2 = new Rectangle(285, 48, 51, 20);
 		final Rectangle mode3 = new Rectangle(285, 68, 51, 20);
 		final Rectangle mode4 = new Rectangle(285, 88, 51, 20);
-		final Rectangle optionsOpenArea = new Rectangle(285, 0, 203, 110);
 		final Rectangle cutYewArea = new Rectangle(469, 345, 25, 25);
 		final Rectangle indHatchet = new Rectangle(469, 395, 25, 25);
 		final Rectangle aHatchet = new Rectangle(469, 425, 25, 25);
 		final Rectangle checkBankArea = new Rectangle(200, 345, 25, 25);
 		final Point a = e.getPoint();
 		if (showPaint) {
-			if (mp.moveBox.contains(a) && !showArea.contains(a)) { // TODO
+			if (mp.moveBox.contains(a) && !showArea.contains(a)) {
 				moving = true;
 				mp.xLoc = e.getX() - mp.x;
 				mp.yLoc = e.getY() - mp.y;
@@ -1867,14 +1864,10 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			}
 			if (fmArea.contains(a))
 				trainFM = !trainFM;
-			if (worldArea.contains(a))
-				globeSelected = !globeSelected;
 			if (infoArea.contains(a))
 				sendToURL("http://goo.gl/WEQX6");
 			if (settingsArea.contains(a))
 				playClicked = false;
-			if (!optionsOpenArea.contains(a) && !worldArea.contains(a))
-				globeSelected = false;
 			if (globeSelected) {
 				if (lockArea.contains(a))
 					locked = !locked;
@@ -2406,9 +2399,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				g.drawImage(imgLockOpen, 462, 5, null);
 			else
 				g.drawImage(imgLockClosed, 462, 5, null);
-		} else if (globeHovered)
-			g.drawImage(imgGlobeSelected, 490, 5, null);
-		else
+		} else
 			g.drawImage(imgGlobe, 490, 5, null);
 		if (trainFM || trainFMHovered)
 			g.drawImage(imgFlameSelected, 490, 32, null); // Flame
@@ -2455,8 +2446,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			drawMouse(g);
 	}
 
-	class MasterPaint {
-		public MasterPaint() {
+	class Paint {
+		public Paint() {
 			start = System.currentTimeMillis();
 		}
 		long start;
@@ -2465,7 +2456,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		int xLoc = x;
 		int yLoc = y;
 		Rectangle moveBox = new Rectangle(x, y, 176, 96);
-		public void drawPaint(Graphics g1) { // TODO
+		public void drawPaint(Graphics g1) {
 			if (mp.x < 0)
 				mp.x = 0;
 			if (mp.y < 0)
@@ -2474,6 +2465,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 				mp.x = 588;
 			if (mp.y > 406)
 				mp.y = 406;
+			moveBox = new Rectangle(x, y, 176, 96);
 			final Graphics2D g = (Graphics2D) g1;
 			if (showPaint) {
 				g.setColor(colorGreenL);
