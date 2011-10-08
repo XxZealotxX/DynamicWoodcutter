@@ -1858,8 +1858,8 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					checkBankSelected = !checkBankSelected;
 				if (clickArea.contains(a)) {
 					playClicked = true;
+					showSettings = true;
 					wait = false;
-					globeSelected = false;
 					useAvailableHatchets = useAvailableHatchetsSelected;
 					yewAfter60 = yewsAfter60Selected;
 					checkBank = checkBankSelected;
@@ -2021,7 +2021,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				sawLamp = true;
 		}
 	}
-	final Color colorGreenL = new Color(50, 255, 50, 130); // back
+	final Color colorGreenL = new Color(40, 255, 60, 180); // back
 	final Color colorGreenH = new Color(50, 255, 50, 200);
 	final Color colorRed = new Color(255, 50, 50, 150); // red
 	final Color colorWhiteL = new Color(255, 255, 255, 100); // White
@@ -2547,8 +2547,9 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				            / (System.currentTimeMillis() - startTime) * 10)
 				            / 10 + "k xp/hr", x + 5, y + 93);
 				g.setFont(arialL);
-				g.drawString("Time: " + hours + ":" + minutes + ":" + seconds + "   Version: " + scriptVersion, x + 5,
-				    y + 48);
+				DecimalFormat a = new DecimalFormat("00");
+				g.drawString("Time: " + a.format(hours) + ":" + a.format(minutes) + ":" + a.format(seconds)
+				        + "   Version: " + scriptVersion, x + 5, y + 48);
 				g.setColor(Color.BLACK); // Show/Hide button
 				g.drawRect(x + 142, y + 77, 34, 19);
 				g.setFont(arialL);
