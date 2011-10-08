@@ -168,6 +168,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	boolean sawLamp = false;
 	boolean burnLogs = false;
 	boolean trainFM = false;
+	boolean globeHovered = false;
+	boolean trainFMHovered = false;
 	RSItem dontClick = null;
 	RSTile dest = null;
 	boolean end = false;
@@ -194,6 +196,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int treeFails = 0;
 	boolean dropLogs;
 	boolean scriptRunning = true;
+	boolean moving = false;
+	MasterPaint mp;
 	private final static int[] dropPath1 = { 1, 2, 3, 4, 8, 7, 6, 5, 9, 10, 11, 12, 16, 15, 14, 13, 17, 18, 19, 20, 24,
 	        23, 22, 21, 25, 26, 27, 28 };
 	private final static int[] dropPath2 = { 1, 5, 2, 9, 6, 3, 13, 10, 7, 4, 17, 14, 11, 8, 21, 18, 15, 12, 25, 22, 19,
@@ -213,6 +217,7 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	public boolean onStart() {
 		mouse.setSpeed(6);
 		new PaintUpdater();
+		mp = new MasterPaint();
 		return true;
 	}
 	@Override
@@ -829,7 +834,8 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			RSItem log = inventory.getItemAt(i - 1);
 			for (int id : logIDs) {
 				if (log.getID() == id) {
-					while (log != null && !log.interact("Drop")) // TODO
+					while (log != null && !log.interact("Drop"))
+						// TODO
 						log = inventory.getItemAt(i - 1);
 					sleep(random(10, 30));
 				}
@@ -1765,15 +1771,29 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			}
 		}
 	}
-	public void mouseEntered(final MouseEvent arg0) {}
-	public void mouseExited(final MouseEvent arg0) {}
-	public void mouseReleased(final MouseEvent arg0) {}
-	public void mouseDragged(final MouseEvent arg0) {}
-	public void mouseMoved(final MouseEvent arg0) {
+	public void mouseEntered(final MouseEvent e) {}
+	public void mouseExited(final MouseEvent e) {}
+	public void mouseReleased(final MouseEvent e) {
+		if (moving) {
+			mp.x = e.getX() - mp.xLoc;
+			mp.y = e.getY() - mp.yLoc;
+			mp.moveBox = new Rectangle(mp.x, mp.y, 176, 96);
+		}
+		moving = false;
+	}
+	public void mouseDragged(final MouseEvent e) {
+		if (moving) {
+			mp.x = e.getX() - mp.xLoc;
+			mp.y = e.getY() - mp.yLoc;
+		}
+	}
+	public void mouseMoved(final MouseEvent e) {
 		final Rectangle infoArea = new Rectangle(490, 59, 25, 25);
 		final Rectangle clickArea = new Rectangle(240, 150, 50, 50);
 		final Rectangle settingsArea = new Rectangle(490, 86, 25, 25);
-		final Point a = arg0.getPoint();
+		final Rectangle fmArea = new Rectangle(490, 32, 25, 25);
+		final Rectangle worldArea = new Rectangle(490, 5, 25, 25);
+		final Point a = e.getPoint();
 		if (infoArea.contains(a))
 			infoSelected = true;
 		else
@@ -1786,9 +1806,17 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 			settingsSelected = true;
 		else
 			settingsSelected = false;
+		if (fmArea.contains(a))
+			trainFMHovered = true;
+		else
+			trainFMHovered = false;
+		if (worldArea.contains(a))
+			globeHovered = true;
+		else
+			globeHovered = false;
 	}
 	public void mousePressed(final MouseEvent e) {
-		final Rectangle showArea = new Rectangle(482, 319, 34, 19);
+		final Rectangle showArea = new Rectangle(mp.x + 142, mp.y + 77, 34, 19);
 		final Rectangle fmArea = new Rectangle(490, 32, 25, 25);
 		final Rectangle worldArea = new Rectangle(490, 5, 25, 25);
 		final Rectangle lockArea = new Rectangle(462, 5, 24, 24);
@@ -1814,6 +1842,11 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 		final Rectangle checkBankArea = new Rectangle(200, 345, 25, 25);
 		final Point a = e.getPoint();
 		if (showPaint) {
+			if (mp.moveBox.contains(a) && !showArea.contains(a)) { // TODO
+				moving = true;
+				mp.xLoc = e.getX() - mp.x;
+				mp.yLoc = e.getY() - mp.y;
+			}
 			if (!playClicked) {
 				if (indHatchet.contains(a))
 					useAvailableHatchetsSelected = false;
@@ -2044,476 +2077,507 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 	int oakLocation = 1;
 	int willowLocation = 1;
 	int yewLocation = 1;
+	long hours = 0;
+	long minutes = 0;
+	long seconds = 0;
 	public void onRepaint(final Graphics g1) {
 		final Graphics2D g = (Graphics2D) g1;
 		g.setRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON));
 		long millis = System.currentTimeMillis() - startTime;
-		final long hours = millis / (1000 * 60 * 60);
+		hours = millis / (1000 * 60 * 60);
 		millis -= hours * (1000 * 60 * 60);
-		final long minutes = millis / (1000 * 60);
+		minutes = millis / (1000 * 60);
 		millis -= minutes * (1000 * 60);
-		final long seconds = millis / 1000;
-		if (showPaint) {
-			if (globeSelected) {
-				if (treeSelected) {
-					g.setColor(colorBlack); // Largest box
-					g.fillRect(336, 3, 124, 25 + 20 * 1);
-					g.setColor(Color.BLACK);
-					g.drawRect(336, 3, 124, 25 + 20 * 1);
-					g.setColor(colorBlack); // Thin middle box
-					g.fillRect(460, 3, 27, 25 + 20 * 1);
-					g.setColor(Color.BLACK);
-					g.drawRect(460, 3, 27, 25 + 20 * 1);
-					g.drawImage(imgTickSmall, 466, 32 + 20 * (treeLocation - 1), null); // Tick
-					g.setColor(colorGreenH);
-					g.setFont(dotum);
-					g.drawString("Lumbridge", 341, 44);
-				}
-				if (oakSelected) {
-					g.setColor(colorBlack); // Largest box
-					g.fillRect(336, 3, 124, 25 + 20 * 3);
-					g.setColor(Color.BLACK);
-					g.drawRect(336, 3, 124, 25 + 20 * 3);
-					g.setColor(colorBlack); // Thin middle box
-					g.fillRect(460, 3, 27, 25 + 20 * 3);
-					g.setColor(Color.BLACK);
-					g.drawRect(460, 3, 27, 25 + 20 * 3);
-					g.drawImage(imgTickSmall, 466, 32 + 20 * (oakLocation - 1), null); // Tick
-					g.setColor(colorGreenH);
-					g.setFont(dotum);
-					g.drawString("North East Draynor", 341, 44);
-					g.drawString("East Draynor", 341, 64);
-					g.drawString("North Draynor", 341, 84);
-				}
-				if (willowSelected) {
-					g.setColor(colorBlack); // Largest box
-					g.fillRect(336, 3, 124, 25 + 20 * 4);
-					g.setColor(Color.BLACK);
-					g.drawRect(336, 3, 124, 25 + 20 * 4);
-					g.setColor(colorBlack); // Thin middle box
-					g.fillRect(460, 3, 27, 25 + 20 * 4);
-					g.setColor(Color.BLACK);
-					g.drawRect(460, 3, 27, 25 + 20 * 4);
-					g.drawImage(imgTickSmall, 466, 32 + 20 * (willowLocation - 1), null); // Tick
-					g.setColor(colorGreenH);
-					g.setFont(dotum);
-					g.drawString("Rimmington", 341, 44);
-					g.drawString("Lumbridge", 341, 64);
-					g.drawString("Port Sarim", 341, 84);
-					g.drawString("Draynor", 341, 104);
-				}
-				if (yewSelected) {
-					g.setColor(colorBlack); // Largest box
-					g.fillRect(336, 3, 124, 25 + 20 * 3);
-					g.setColor(Color.BLACK);
-					g.drawRect(336, 3, 124, 25 + 20 * 3);
-					g.setColor(colorBlack); // Thin middle box
-					g.fillRect(460, 3, 27, 25 + 20 * 3);
-					g.setColor(Color.BLACK);
-					g.drawRect(460, 3, 27, 25 + 20 * 3);
-					g.drawImage(imgTickSmall, 466, 32 + 20 * (yewLocation - 1), null); // Tick
-					g.setColor(colorGreenH);
-					g.setFont(dotum);
-					g.drawString("Rimmington", 341, 44);
-					g.drawString("Lumbridge", 341, 64);
-					g.drawString("Port Sarim", 341, 84);
-				}
-				if (treeSelected) {
-					g.setColor(colorGreenH);
-					g.setFont(arialS);
-					g.drawString("Tree", 342, 21);
-					if (treeLocation == 1) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 60);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 60);
-						if (bankTree)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 81);
-						if (dropTree)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 61);
-						if (!bankTree && !dropTree)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Sell", 290, 41);
-					}
-				} else {
-					g.setFont(arialS);
-					g.setColor(Color.WHITE);
-					g.drawString("Tree", 342, 21);
-				}
-				if (oakSelected) {
-					g.setColor(colorGreenH);
-					g.setFont(arialS);
-					g.drawString("Oak", 374, 21);
-					if (oakLocation == 1) { // All modes for oaks are the same.
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 60);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 60);
-						g.setColor(Color.WHITE);
-						if (bankOak || !dropOak && !powerchopOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 41);
-						if (dropOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 61);
-						if (powerchopOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 81);
-					}
-					if (oakLocation == 2) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 60);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 60);
-						if (bankOak || !dropOak && !powerchopOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 41);
-						if (dropOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 61);
-						if (powerchopOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 81);
-					}
-					if (oakLocation == 3) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 60);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 60);
-						if (bankOak || !dropOak && !powerchopOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 41);
-						if (dropOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 61);
-						if (powerchopOak)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 81);
-					}
-				} else {
-					g.setColor(Color.WHITE);
-					g.setFont(arialS);
-					g.drawString("Oak", 374, 21);
-				}
-				if (willowSelected) {
-					g.setColor(colorGreenH);
-					g.setFont(arialS);
-					g.drawString("Willow", 401, 21);
-					if (willowLocation == 1) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 80);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 80);
-						if (!bankWillow && !dropWillow && !powerchopWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Sell", 290, 41);
-						if (bankWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 61);
-						if (dropWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 81);
-						if (powerchopWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 101);
-					}
-					if (willowLocation == 2) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 80);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 80);
-						if (!bankWillow && !dropWillow && !powerchopWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Sell", 290, 41);
-						if (bankWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 61);
-						if (dropWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 81);
-						if (powerchopWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 101);
-					}
-					if (willowLocation == 3) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 60);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 60);
-						if (bankWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 41);
-						if (dropWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 61);
-						if (powerchopWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 81);
-					}
-					if (willowLocation == 4) {
-						g.setColor(colorBlack);
-						g.fillRect(285, 28, 51, 60);
-						g.setColor(Color.BLACK);
-						g.drawRect(285, 28, 51, 60);
-						if (bankWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Deposit", 290, 41);
-						if (dropWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Drop", 290, 61);
-						if (powerchopWillow)
-							g.setColor(colorGreenH);
-						else
-							g.setColor(Color.WHITE);
-						g.drawString("Powerchop", 290, 81);
-					}
-				} else {
-					g.setColor(Color.WHITE);
-					g.setFont(arialS);
-					g.drawString("Willow", 401, 21);
-				}
-				if (yewSelected) {
-					g.setColor(colorGreenH);
-					g.setFont(arialS);
-					g.drawString("Yew", 435, 21);
-					g.setColor(colorBlack);
-					g.fillRect(285, 28, 51, 20);
-					g.setColor(colorBlack);
-					g.drawRect(285, 28, 51, 20);
-					if (yewLocation == 1) { // All yew modes are the same.
-						g.setColor(colorGreenH);
-						g.drawString("Deposit", 290, 41);
-					}
-					if (yewLocation == 2) {
-						g.setColor(colorGreenH);
-						g.drawString("Deposit", 290, 41);
-					}
-					if (yewLocation == 3) {
-						g.setColor(colorGreenH);
-						g.drawString("Deposit", 290, 41);
-					}
-				} else {
-					g.setColor(Color.WHITE);
-					g.setFont(arialS);
-					g.drawString("Yew", 435, 21);
-				}
+		seconds = millis / 1000;
+		if (globeSelected) {
+			if (treeSelected) {
+				g.setColor(colorBlack); // Largest box
+				g.fillRect(336, 3, 124, 25 + 20 * 1);
 				g.setColor(Color.BLACK);
-				g.drawRect(285, 3, 51, 25);
-				g.setColor(colorBlack);
-				g.fillRect(285, 3, 51, 25);
-				g.setColor(Color.WHITE);
-				g.drawString("MODE", 290, 21);
+				g.drawRect(336, 3, 124, 25 + 20 * 1);
+				g.setColor(colorBlack); // Thin middle box
+				g.fillRect(460, 3, 27, 25 + 20 * 1);
 				g.setColor(Color.BLACK);
-				g.drawRect(336, 3, 31, 25);
-				g.setColor(Color.BLACK);
-				g.drawRect(367, 3, 31, 25);
-				g.setColor(Color.BLACK);
-				g.drawRect(398, 3, 31, 25);
-				g.setColor(Color.BLACK);
-				g.drawRect(429, 3, 31, 25);
-				g.setFont(arialS);
-			}
-			if (globeSelected) {
-				g.drawImage(imgGlobeSelected, 490, 5, null); // Globe
-				if (!locked)
-					g.drawImage(imgLockOpen, 462, 5, null);
-				else
-					g.drawImage(imgLockClosed, 462, 5, null);
-			} else
-				g.drawImage(imgGlobe, 490, 5, null);
-			if (trainFM)
-				g.drawImage(imgFlameSelected, 490, 32, null); // Flame
-			else
-				g.drawImage(imgFlame, 490, 32, null);
-			if (infoSelected)
-				g.drawImage(imgInfoSelected, 490, 59, null);
-			else
-				g.drawImage(imgInfo, 490, 59, null);
-			if (settingsSelected)
-				g.drawImage(imgSettingsSelected, 490, 86, null);
-			else
-				g.drawImage(imgSettings, 490, 86, null);
-			if (!playClicked) {
-				g.drawImage(optionsBackground, 0, 338, null);
+				g.drawRect(460, 3, 27, 25 + 20 * 1);
+				g.drawImage(imgTickSmall, 466, 32 + 20 * (treeLocation - 1), null); // Tick
+				g.setColor(colorGreenH);
 				g.setFont(dotum);
-				g.setColor(Color.BLACK);
-				g.drawString("Cut Yews after 60 WC.", 338, 362);
-				if (yewsAfter60Selected)
-					g.drawImage(imgTickSelected, 469, 345, null);
-				else
-					g.drawImage(imgTick, 469, 345, null);
-				g.drawString("Use available hatchets.", 334, 442);
-				g.drawString("Obtain hatchets independently.", 290, 412);
-				if (useAvailableHatchetsSelected) {
-					g.drawImage(imgTickSelected, 469, 425, null);
-					g.drawImage(imgTick, 469, 395, null);
-				} else {
-					g.drawImage(imgTickSelected, 469, 395, null);
-					g.drawImage(imgTick, 469, 425, null);
-				}
-				if (playSelected)
-					g.drawImage(imgPlaySelected, 240, 150, null);
-				else
-					g.drawImage(imgPlay, 240, 150, null);
-				g.drawString("Force one bank.", 10, 362);
-				if (checkBankSelected)
-					g.drawImage(imgTickSelected, 200, 345, null);
-				else
-					g.drawImage(imgTick, 200, 345, null);
+				g.drawString("Lumbridge", 341, 44);
 			}
-			g.setColor(colorGreenL);
-			g.fillRect(340, 242, 176, 96); // Green back
-			g.setColor(Color.BLACK);
-			g.setStroke(stroke1);
-			g.drawRect(340, 242, 176, 96);
-			g.setColor(colorRed); // Red bar
-			g.fillRect(340, 221, 176, 18);
-			g.setColor(Color.BLACK);
-			g.drawRect(340, 221, 176, 18);
-			g.setColor(colorGreenH); // Green bar
-			g.fillRect(342, 223, skills.getPercentToNextLevel(Skills.WOODCUTTING), 15);
-			g.setColor(colorWhiteL); // White bar
-			g.fillRect(341, 230, 175, 9);
-			g.setFont(arialL);
-			g.setColor(Color.BLACK);
-			g.drawString(Integer.toString(wcLvl()) + " WC", 415, 235);
-			if (trainFM) {
-				g.setColor(colorGreenL);
-				g.fillRect(340, 186, 176, 32); // Green back
+			if (oakSelected) {
+				g.setColor(colorBlack); // Largest box
+				g.fillRect(336, 3, 124, 25 + 20 * 3);
 				g.setColor(Color.BLACK);
-				g.setStroke(stroke1);
-				g.drawRect(340, 186, 176, 32);
-				g.setColor(colorRed); // Red bar
-				g.fillRect(340, 165, 176, 18);
+				g.drawRect(336, 3, 124, 25 + 20 * 3);
+				g.setColor(colorBlack); // Thin middle box
+				g.fillRect(460, 3, 27, 25 + 20 * 3);
 				g.setColor(Color.BLACK);
-				g.drawRect(340, 165, 176, 18);
-				g.setColor(colorGreenH); // Green bar
-				g.fillRect(342, 167, skills.getPercentToNextLevel(Skills.FIREMAKING), 15);
-				g.setColor(colorWhiteL); // White bar
-				g.fillRect(341, 174, 175, 9);
-				g.setFont(arialL);
-				g.setColor(Color.BLACK);
-				g.drawString(Integer.toString(fmLvl()) + " FM", 415, 179);
-				g.drawString(levelsGained2 + " levels, " + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2)
-				        + " xp", 345, 200);
-				g.drawString(
-				    (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) * 3600D
-				            / (System.currentTimeMillis() - startTime) * 10)
-				            / 10
-				            + "k xp/hr  "
-				            + (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING)
-				                    + skills.getCurrentExp(Skills.WOODCUTTING) - initialXP - initialXP2)
-				                    * 3600D / (System.currentTimeMillis() - startTime) * 10) / 10 + "k total xp/hr",
-				    345, 215);
-				g.setColor(Color.WHITE);
-				long timeRemaining = timer2 - System.currentTimeMillis();
-				if (timeRemaining >= 0)
-					g.drawString(Long.toString(timeRemaining), 255, 180);
-				else if (timeRemaining >= -5000)
-					g.drawString("0", 255, 180);
+				g.drawRect(460, 3, 27, 25 + 20 * 3);
+				g.drawImage(imgTickSmall, 466, 32 + 20 * (oakLocation - 1), null); // Tick
+				g.setColor(colorGreenH);
+				g.setFont(dotum);
+				g.drawString("North East Draynor", 341, 44);
+				g.drawString("East Draynor", 341, 64);
+				g.drawString("North Draynor", 341, 84);
 			}
-			g.setFont(cordia);
-			g.setColor(Color.BLACK);
-			g.drawString("Dynamic Woodcutter", 346, 260);
-			g.setFont(arialL); // General text
-			if (status != null && !status.contains("unavailable"))
-				g.drawString("Status: " + status, 345, 275);
-			else {
-				g.setColor(Color.RED);
-				g.drawString("Status: " + status, 345, 275);
+			if (willowSelected) {
+				g.setColor(colorBlack); // Largest box
+				g.fillRect(336, 3, 124, 25 + 20 * 4);
 				g.setColor(Color.BLACK);
+				g.drawRect(336, 3, 124, 25 + 20 * 4);
+				g.setColor(colorBlack); // Thin middle box
+				g.fillRect(460, 3, 27, 25 + 20 * 4);
+				g.setColor(Color.BLACK);
+				g.drawRect(460, 3, 27, 25 + 20 * 4);
+				g.drawImage(imgTickSmall, 466, 32 + 20 * (willowLocation - 1), null); // Tick
+				g.setColor(colorGreenH);
+				g.setFont(dotum);
+				g.drawString("Rimmington", 341, 44);
+				g.drawString("Lumbridge", 341, 64);
+				g.drawString("Port Sarim", 341, 84);
+				g.drawString("Draynor", 341, 104);
 			}
-			if (totalCash > 1000000)
-				g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100000) / 10d) + "m", 345,
-				    305);
-			else if (totalCash > 1000)
-				g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100) / 10d) + "k", 345, 305);
-			else
-				g.drawString("Available wealth: " + Integer.toString(totalCash), 345, 305);
-			g.drawString(levelsGained + " levels" + ", " + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP)
-			        + " xp", 345, 320);
-			g.drawString(
-			    (double) Math.round((skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) * 3600D
-			            / (System.currentTimeMillis() - startTime) * 10)
-			            / 10 + "k xp/hr", 345, 335);
-			if (antiBan.length() > 0) {
+			if (yewSelected) {
+				g.setColor(colorBlack); // Largest box
+				g.fillRect(336, 3, 124, 25 + 20 * 3);
+				g.setColor(Color.BLACK);
+				g.drawRect(336, 3, 124, 25 + 20 * 3);
+				g.setColor(colorBlack); // Thin middle box
+				g.fillRect(460, 3, 27, 25 + 20 * 3);
+				g.setColor(Color.BLACK);
+				g.drawRect(460, 3, 27, 25 + 20 * 3);
+				g.drawImage(imgTickSmall, 466, 32 + 20 * (yewLocation - 1), null); // Tick
+				g.setColor(colorGreenH);
+				g.setFont(dotum);
+				g.drawString("Rimmington", 341, 44);
+				g.drawString("Lumbridge", 341, 64);
+				g.drawString("Port Sarim", 341, 84);
+			}
+			if (treeSelected) {
+				g.setColor(colorGreenH);
 				g.setFont(arialS);
-				g.setColor(colorWhiteL);
-				g.fillRect(100, 323, g.getFontMetrics().stringWidth("Antiban: " + antiBan) + 3, 15);
-				g.setColor(Color.BLACK);
-				g.drawRect(100, 323, g.getFontMetrics().stringWidth("Antiban: " + antiBan) + 3, 15);
-				g.drawString("Antiban: " + antiBan, 102, 333);
+				g.drawString("Tree", 342, 21);
+				if (treeLocation == 1) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 60);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 60);
+					if (bankTree)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 81);
+					if (dropTree)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 61);
+					if (!bankTree && !dropTree)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Sell", 290, 41);
+				}
+			} else {
+				g.setFont(arialS);
+				g.setColor(Color.WHITE);
+				g.drawString("Tree", 342, 21);
 			}
-			g.setFont(arialL);
-			g.drawString("Time: " + hours + ":" + minutes + ":" + seconds + "   Version: " + scriptVersion, 345, 290);
-			g.setColor(Color.BLACK); // Show/Hide button
-			g.drawRect(482, 319, 34, 19);
-			g.setFont(arialL);
+			if (oakSelected) {
+				g.setColor(colorGreenH);
+				g.setFont(arialS);
+				g.drawString("Oak", 374, 21);
+				if (oakLocation == 1) { // All modes for oaks are the same.
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 60);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 60);
+					g.setColor(Color.WHITE);
+					if (bankOak || !dropOak && !powerchopOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 41);
+					if (dropOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 61);
+					if (powerchopOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 81);
+				}
+				if (oakLocation == 2) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 60);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 60);
+					if (bankOak || !dropOak && !powerchopOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 41);
+					if (dropOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 61);
+					if (powerchopOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 81);
+				}
+				if (oakLocation == 3) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 60);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 60);
+					if (bankOak || !dropOak && !powerchopOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 41);
+					if (dropOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 61);
+					if (powerchopOak)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 81);
+				}
+			} else {
+				g.setColor(Color.WHITE);
+				g.setFont(arialS);
+				g.drawString("Oak", 374, 21);
+			}
+			if (willowSelected) {
+				g.setColor(colorGreenH);
+				g.setFont(arialS);
+				g.drawString("Willow", 401, 21);
+				if (willowLocation == 1) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 80);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 80);
+					if (!bankWillow && !dropWillow && !powerchopWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Sell", 290, 41);
+					if (bankWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 61);
+					if (dropWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 81);
+					if (powerchopWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 101);
+				}
+				if (willowLocation == 2) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 80);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 80);
+					if (!bankWillow && !dropWillow && !powerchopWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Sell", 290, 41);
+					if (bankWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 61);
+					if (dropWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 81);
+					if (powerchopWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 101);
+				}
+				if (willowLocation == 3) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 60);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 60);
+					if (bankWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 41);
+					if (dropWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 61);
+					if (powerchopWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 81);
+				}
+				if (willowLocation == 4) {
+					g.setColor(colorBlack);
+					g.fillRect(285, 28, 51, 60);
+					g.setColor(Color.BLACK);
+					g.drawRect(285, 28, 51, 60);
+					if (bankWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Deposit", 290, 41);
+					if (dropWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Drop", 290, 61);
+					if (powerchopWillow)
+						g.setColor(colorGreenH);
+					else
+						g.setColor(Color.WHITE);
+					g.drawString("Powerchop", 290, 81);
+				}
+			} else {
+				g.setColor(Color.WHITE);
+				g.setFont(arialS);
+				g.drawString("Willow", 401, 21);
+			}
+			if (yewSelected) {
+				g.setColor(colorGreenH);
+				g.setFont(arialS);
+				g.drawString("Yew", 435, 21);
+				g.setColor(colorBlack);
+				g.fillRect(285, 28, 51, 20);
+				g.setColor(colorBlack);
+				g.drawRect(285, 28, 51, 20);
+				if (yewLocation == 1) { // All yew modes are the same.
+					g.setColor(colorGreenH);
+					g.drawString("Deposit", 290, 41);
+				}
+				if (yewLocation == 2) {
+					g.setColor(colorGreenH);
+					g.drawString("Deposit", 290, 41);
+				}
+				if (yewLocation == 3) {
+					g.setColor(colorGreenH);
+					g.drawString("Deposit", 290, 41);
+				}
+			} else {
+				g.setColor(Color.WHITE);
+				g.setFont(arialS);
+				g.drawString("Yew", 435, 21);
+			}
 			g.setColor(Color.BLACK);
-			g.drawString("Hide", 487, 334);
-		} else {
-			g.setColor(colorGreenL); // Show/Hide button
-			g.fillRect(482, 319, 34, 19);
+			g.drawRect(285, 3, 51, 25);
+			g.setColor(colorBlack);
+			g.fillRect(285, 3, 51, 25);
+			g.setColor(Color.WHITE);
+			g.drawString("MODE", 290, 21);
 			g.setColor(Color.BLACK);
-			g.drawRect(482, 319, 34, 19);
-			g.setFont(arialL);
+			g.drawRect(336, 3, 31, 25);
 			g.setColor(Color.BLACK);
-			g.drawString("Show", 484, 334);
+			g.drawRect(367, 3, 31, 25);
+			g.setColor(Color.BLACK);
+			g.drawRect(398, 3, 31, 25);
+			g.setColor(Color.BLACK);
+			g.drawRect(429, 3, 31, 25);
+			g.setFont(arialS);
 		}
+		if (globeSelected) {
+			g.drawImage(imgGlobeSelected, 490, 5, null); // Globe
+			if (!locked)
+				g.drawImage(imgLockOpen, 462, 5, null);
+			else
+				g.drawImage(imgLockClosed, 462, 5, null);
+		} else if (globeHovered)
+			g.drawImage(imgGlobeSelected, 490, 5, null);
+		else
+			g.drawImage(imgGlobe, 490, 5, null);
+		if (trainFM || trainFMHovered)
+			g.drawImage(imgFlameSelected, 490, 32, null); // Flame
+		else
+			g.drawImage(imgFlame, 490, 32, null);
+		if (infoSelected)
+			g.drawImage(imgInfoSelected, 490, 59, null);
+		else
+			g.drawImage(imgInfo, 490, 59, null);
+		if (settingsSelected)
+			g.drawImage(imgSettingsSelected, 490, 86, null);
+		else
+			g.drawImage(imgSettings, 490, 86, null);
+		if (!playClicked) {
+			g.drawImage(optionsBackground, 0, 338, null);
+			g.setFont(dotum);
+			g.setColor(Color.BLACK);
+			g.drawString("Cut Yews after 60 WC.", 338, 362);
+			if (yewsAfter60Selected)
+				g.drawImage(imgTickSelected, 469, 345, null);
+			else
+				g.drawImage(imgTick, 469, 345, null);
+			g.drawString("Use available hatchets.", 334, 442);
+			g.drawString("Obtain hatchets independently.", 290, 412);
+			if (useAvailableHatchetsSelected) {
+				g.drawImage(imgTickSelected, 469, 425, null);
+				g.drawImage(imgTick, 469, 395, null);
+			} else {
+				g.drawImage(imgTickSelected, 469, 395, null);
+				g.drawImage(imgTick, 469, 425, null);
+			}
+			if (playSelected)
+				g.drawImage(imgPlaySelected, 240, 150, null);
+			else
+				g.drawImage(imgPlay, 240, 150, null);
+			g.drawString("Force one bank.", 10, 362);
+			if (checkBankSelected)
+				g.drawImage(imgTickSelected, 200, 345, null);
+			else
+				g.drawImage(imgTick, 200, 345, null);
+		}
+		mp.drawPaint(g);
 		if (playClicked)
 			drawMouse(g);
+	}
+
+	class MasterPaint {
+		public MasterPaint() {
+			start = System.currentTimeMillis();
+		}
+		long start;
+		int x = 340;
+		int y = 242;
+		int xLoc = x;
+		int yLoc = y;
+		Rectangle moveBox = new Rectangle(x, y, 176, 96);
+		public void drawPaint(Graphics g1) { // TODO
+			if (mp.x < 0)
+				mp.x = 0;
+			if (mp.y < 0)
+				mp.y = 0;
+			if (mp.x > 588)
+				mp.x = 588;
+			if (mp.y > 406)
+				mp.y = 406;
+			final Graphics2D g = (Graphics2D) g1;
+			if (showPaint) {
+				g.setColor(colorGreenL);
+				g.fillRect(x, y, 176, 96); // Green back
+				g.setColor(Color.BLACK);
+				g.setStroke(stroke1);
+				g.drawRect(x, y, 176, 96);
+				g.setColor(colorRed); // Red bar
+				g.fillRect(x, y - 21, 176, 18);
+				g.setColor(Color.BLACK);
+				g.drawRect(x, y - 21, 176, 18);
+				g.setColor(colorGreenH); // Green bar
+				g.fillRect(x + 2, y - 19, skills.getPercentToNextLevel(Skills.WOODCUTTING), 15);
+				g.setColor(colorWhiteL); // White bar
+				g.fillRect(x + 1, y - 12, 175, 9);
+				g.setFont(arialL);
+				g.setColor(Color.BLACK);
+				g.drawString(Integer.toString(wcLvl()) + " WC", x + 75, y - 7);
+				if (trainFM) {
+					g.setColor(colorGreenL);
+					g.fillRect(x, y - 56, 176, 32); // Green back
+					g.setColor(Color.BLACK);
+					g.setStroke(stroke1);
+					g.drawRect(x, y - 56, 176, 32);
+					g.setColor(colorRed); // Red bar
+					g.fillRect(x, y - 77, 176, 18);
+					g.setColor(Color.BLACK);
+					g.drawRect(x, y - 77, 176, 18);
+					g.setColor(colorGreenH); // Green bar
+					g.fillRect(x + 2, y - 75, skills.getPercentToNextLevel(Skills.FIREMAKING), 15);
+					g.setColor(colorWhiteL); // White bar
+					g.fillRect(x + 1, y - 68, 175, 9);
+					g.setFont(arialL);
+					g.setColor(Color.BLACK);
+					g.drawString(Integer.toString(fmLvl()) + " FM", x + 75, y - 63);
+					g.drawString(levelsGained2 + " levels, " + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2)
+					        + " xp", x + 5, y - 42);
+					g.drawString(
+					    (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) * 3600D
+					            / (System.currentTimeMillis() - startTime) * 10)
+					            / 10
+					            + "k xp/hr  "
+					            + (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING)
+					                    + skills.getCurrentExp(Skills.WOODCUTTING) - initialXP - initialXP2)
+					                    * 3600D / (System.currentTimeMillis() - startTime) * 10) / 10 + "k total xp/hr",
+					    x + 5, y - 27);
+					g.setColor(Color.WHITE);
+					long timeRemaining = timer2 - System.currentTimeMillis();
+					if (timeRemaining >= 0)
+						g.drawString(Long.toString(timeRemaining), 255, 180);
+					else if (timeRemaining >= -5000)
+						g.drawString("0", 255, 180);
+				}
+				g.setFont(cordia);
+				g.setColor(Color.BLACK);
+				g.drawString("Dynamic Woodcutter", x + 6, y + 18);
+				g.setFont(arialL); // General text
+				if (status != null && !status.contains("unavailable"))
+					g.drawString("Status: " + status, x + 5, y + 33);
+				else {
+					g.setColor(Color.RED);
+					g.drawString("Status: " + status, x + 5, y + 33);
+					g.setColor(Color.BLACK);
+				}
+				if (totalCash > 1000000)
+					g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100000) / 10d) + "m",
+					    x + 5, y + 63);
+				else if (totalCash > 1000)
+					g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100) / 10d) + "k",
+					    x + 5, y + 63);
+				else
+					g.drawString("Available wealth: " + Integer.toString(totalCash), x + 5, y + 63);
+				g.drawString(levelsGained + " levels" + ", " + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP)
+				        + " xp", x + 5, y + 78);
+				g.drawString(
+				    (double) Math.round((skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) * 3600D
+				            / (System.currentTimeMillis() - startTime) * 10)
+				            / 10 + "k xp/hr", x + 5, y + 93);
+				g.setFont(arialL);
+				g.drawString("Time: " + hours + ":" + minutes + ":" + seconds + "   Version: " + scriptVersion, x + 5,
+				    y + 48);
+				g.setColor(Color.BLACK); // Show/Hide button
+				g.drawRect(x + 142, y + 77, 34, 19);
+				g.setFont(arialL);
+				g.setColor(Color.BLACK);
+				g.drawString("Hide", x + 147, y + 92);
+				if (antiBan.length() > 0) {
+					g.setFont(arialS);
+					g.setColor(colorWhiteL);
+					g.fillRect(100, 323, g.getFontMetrics().stringWidth("Antiban: " + antiBan) + 3, 15);
+					g.setColor(Color.BLACK);
+					g.drawRect(100, 323, g.getFontMetrics().stringWidth("Antiban: " + antiBan) + 3, 15);
+					g.drawString("Antiban: " + antiBan, 102, 333);
+				}
+			} else {
+				g.setColor(colorGreenL); // Show/Hide button
+				g.fillRect(x + 142, y + 77, 34, 19);
+				g.setColor(Color.BLACK);
+				g.drawRect(x + 142, y + 77, 34, 19);
+				g.setFont(arialL);
+				g.setColor(Color.BLACK);
+				g.drawString("Show", x + 144, y + 92);
+			}
+		}
 	}
 	private void drawMouse(final Graphics2D g) {
 		g.setRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON));
@@ -3629,8 +3693,6 @@ public class DynamicWoodcutter extends Script implements PaintListener, MouseLis
 							sleep(random(500, 1500));
 							break;
 					}
-					break;
-				default:
 					break;
 			}
 			if (powerchop)
