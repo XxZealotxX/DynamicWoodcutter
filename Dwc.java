@@ -13,14 +13,11 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.DecimalFormat;
-import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -541,7 +538,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 						findNewTile(start, false);
 						return 0;
 					}
-					if (drop) {
+					if (drop || powerchop) {
 						dropLogs = true;
 						return 0;
 					}
@@ -567,7 +564,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 						findNewTile(start, false);
 						return 0;
 					}
-					if (drop) {
+					if (drop || powerchop) {
 						dropLogs = true;
 						return 0;
 					}
@@ -602,7 +599,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 						findNewTile(start, false);
 						return 0;
 					}
-					if (drop) {
+					if (drop || powerchop) {
 						dropLogs = true;
 						return 0;
 					}
@@ -648,7 +645,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 						findNewTile(start, true);
 						return 0;
 					}
-					if (drop) {
+					if (drop || powerchop) {
 						dropLogs = true;
 						return 0;
 					}
@@ -670,7 +667,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 						findNewTile(start, true);
 						return 0;
 					}
-					if (drop) {
+					if (drop || powerchop) {
 						dropLogs = true;
 						return 0;
 					}
@@ -1255,7 +1252,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		if (calc.distanceTo(t) <= closeDist) {
 			RSObject tree = getNearestTree(treeID, t, closeDist);
 			if (tree != null) {
-				if (powerchop && clickTree && !trainFM)
+				if (clickTree)
 					if (calc.tileOnScreen(tree.getLocation())) {
 						new Camera(Camera.PITCH);
 						if (!tiles.interact(tree.getLocation(), "Chop down " + treeName))
@@ -1428,9 +1425,8 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	}
 	private boolean clickTin() {
 		final RSItem tin = inventory.getItem(tinderboxID);
-		if (tin != null)
-			if (tin.interact("Use"))
-				return true;
+		if (tin != null && tin.interact("Use"))
+			return true;
 		return false;
 	}
 	private boolean clickLog() {
@@ -2023,6 +2019,9 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				findNewTile(start, false);
 			if (m.contains("the ladder has been completely destroyed"))
 				sawLamp = true;
+			if (m.contains("You've just advanced")) {
+				clickTree = true;
+			}
 		}
 	}
 	final Color colorGreenL = new Color(40, 255, 50, 180); // back
