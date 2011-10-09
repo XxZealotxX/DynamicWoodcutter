@@ -1125,7 +1125,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	}
 	private int useDraynorBank() {
 		final RSNPC banker = npcs.getNearest(Bank.BANKERS);
-		if (!bank.isOpen() && banker != null) {
+		if (!bank.isOpen() && banker != null && calc.distanceTo(banker) < 20) {
 			if (banker.isOnScreen()) {
 				mouse.move(banker.getPoint());
 				mouse.click(false);
@@ -2018,21 +2018,6 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	@Override
 	public void messageReceived(final MessageEvent e) {
 		final String m = e.getMessage();
-		try { // TODO
-			BufferedWriter out = new BufferedWriter(new FileWriter(
-			    "C:/Users/Hayden/Documents/RSBot/Cache/Scripts/DynamicWoodcutter/chatlog.txt", true));
-			Calendar c = Calendar.getInstance();
-			if (e.getID() == MessageEvent.MESSAGE_CHAT) {
-				out.write("[" + c.get(Calendar.HOUR_OF_DAY) + ":" + c.get(Calendar.MINUTE) + ":"
-				        + c.get(Calendar.SECOND) + "] Public: " + m);
-				out.newLine();
-			}
-			if (e.getID() == MessageEvent.MESSAGE_PRIVATE_IN) {
-				out.write("[" + c.getTime().toString() + "] Private: " + m + "\n");
-				out.newLine();
-			}
-			out.flush();
-		} catch (IOException e1) {}
 		if (e.getID() == MessageEvent.MESSAGE_ACTION || e.getID() == MessageEvent.MESSAGE_SERVER) {
 			if (m.contains("can't light a fire"))
 				findNewTile(start, false);
