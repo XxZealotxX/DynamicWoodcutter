@@ -54,7 +54,7 @@ import org.rsbot.script.wrappers.RSTile;
 import org.rsbot.script.wrappers.RSWeb;
 
 @ScriptManifest(website = "http://goo.gl/WEQX6", authors = { "hlunnb" }, keywords = { "Woodcutting, Firemaking" },
-        name = "Dynamic Woodcutter", version = 1.84,
+        name = "Dynamic Woodcutter", version = 1.85,
         description = "Independently trains Woodcutting and Firemaking from a low level.")
 public class Dwc extends Script implements PaintListener, MouseListener, MouseMotionListener, MessageListener {
 	final RSArea adviserHouse = new RSArea(new RSTile(3229, 3236), new RSTile(3232, 3241));
