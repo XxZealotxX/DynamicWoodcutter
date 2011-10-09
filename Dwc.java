@@ -2425,8 +2425,8 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 						g.drawImage(imgTickSelected, 469, 345, null);
 					else
 						g.drawImage(imgTick, 469, 345, null);
-					g.drawString("Use available hatchets.", 334, 442);
-					g.drawString("Obtain hatchets independently.", 290, 412);
+					g.drawString("Buy my own hatchets.", 341, 412);
+					g.drawString("Use hatchets in bank or inventory.", 273, 442);
 					if (useAvailableHatchetsSelected) {
 						g.drawImage(imgTickSelected, 469, 425, null);
 						g.drawImage(imgTick, 469, 395, null);
