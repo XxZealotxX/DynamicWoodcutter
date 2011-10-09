@@ -13,11 +13,14 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.DecimalFormat;
+import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -472,8 +475,10 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 							chill();
 							return 0;
 						}
-					if (calc.distanceTo(bobsTile) > 250 && !isAnimated()) {
-						magic.castSpell(Spell.LUMBRIDGE_HOME_TELEPORT);
+					if (calc.distanceTo(bobsTile) > 100) {
+						if (!isAnimated()) {
+							magic.castSpell(Spell.LUMBRIDGE_HOME_TELEPORT);
+						}
 						return 2000;
 					}
 					webWalk(bobsTile);
@@ -838,13 +843,12 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					while (log != null && !log.interact("Drop"))
 						// TODO Does it work well?
 						log = inventory.getItemAt(i - 1);
-					sleep(random(10, 30));
 				}
 			}
 		}
 		if (inventory.getCount(logIDs) < 3)
 			dropLogs = false;
-		return random(200, 500);
+		return random(100, 300);
 	}
 	private int walkToGE() {
 		pathToGE = walking.newTilePath(toGe);
@@ -910,6 +914,13 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		return false;
 	}
 	private int checkStuff() {
+		if (end) {
+			env.disableRandom("Improved Login");
+			if (!game.isLoggedIn())
+				stopScript(false);
+			game.logout(false);
+			return 1000;
+		}
 		if (!loading) {
 			loading = true;
 			if (currVer == -1) {
@@ -954,15 +965,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 			antibanTimer = startTime + random(5000, 10000);
 			initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
 			initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
-//			levelsGained = 0;
-//			levelsGained2 = 0;
 			return 100;
-		}
-		if (end) {
-			env.disableRandom("Improved Login");
-			if (game.logout(false))
-				stopScript(true);
-			return 1000;
 		}
 		totalCash = inventory.getItem(995) == null ? bankCash + oakCash : inventory.getItem(995).getStackSize()
 		        + bankCash + oakCash;
@@ -1040,6 +1043,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					end = true;
 			} else {
 				walking.walkTileMM(stairs.getLocation());
+				new Camera(stairs);
 				chill();
 			}
 			return random(1000, 1500);
@@ -1221,7 +1225,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	 */
 	private int chopTree(final int farDist, final int closeDist, final RSTile t, final String treeName,
 	        final int[] treeID) {
-		if (powerchop) {
+		if (powerchop && !trainFM) {
 			final RSItem item1 = inventory.getItem(moveIDs);
 			final int idx = item1.getComponent().getComponentIndex();
 			if (idx == 0 || idx == 1 || idx == 4 || idx == 5) {
@@ -1251,7 +1255,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		if (calc.distanceTo(t) <= closeDist) {
 			RSObject tree = getNearestTree(treeID, t, closeDist);
 			if (tree != null) {
-				if (powerchop && clickTree)
+				if (powerchop && clickTree && !trainFM)
 					if (calc.tileOnScreen(tree.getLocation())) {
 						new Camera(Camera.PITCH);
 						if (!tiles.interact(tree.getLocation(), "Chop down " + treeName))
@@ -1317,7 +1321,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		}
 		if (!powerchop && isAnimated())
 			antiBan();
-		if (powerchop) {
+		if (powerchop && !trainFM) {
 			if (invLog == null || !invLog.hasAction("Drop"))
 				invLog = inventory.getItem(regularLogID, oakLogID, willowLogID);
 			final int logs = inventory.getCount(regularLogID, oakLogID, willowLogID);
@@ -1858,7 +1862,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					checkBankSelected = !checkBankSelected;
 				if (clickArea.contains(a)) {
 					playClicked = true;
-					showSettings = true;
+					showSettings = false;
 					wait = false;
 					useAvailableHatchets = useAvailableHatchetsSelected;
 					yewAfter60 = yewsAfter60Selected;
@@ -2014,6 +2018,21 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	@Override
 	public void messageReceived(final MessageEvent e) {
 		final String m = e.getMessage();
+		try { // TODO
+			BufferedWriter out = new BufferedWriter(new FileWriter(
+			    "C:/Users/Hayden/Documents/RSBot/Cache/Scripts/DynamicWoodcutter/chatlog.txt", true));
+			Calendar c = Calendar.getInstance();
+			if (e.getID() == MessageEvent.MESSAGE_CHAT) {
+				out.write("[" + c.get(Calendar.HOUR_OF_DAY) + ":" + c.get(Calendar.MINUTE) + ":"
+				        + c.get(Calendar.SECOND) + "] Public: " + m);
+				out.newLine();
+			}
+			if (e.getID() == MessageEvent.MESSAGE_PRIVATE_IN) {
+				out.write("[" + c.getTime().toString() + "] Private: " + m + "\n");
+				out.newLine();
+			}
+			out.flush();
+		} catch (IOException e1) {}
 		if (e.getID() == MessageEvent.MESSAGE_ACTION || e.getID() == MessageEvent.MESSAGE_SERVER) {
 			if (m.contains("can't light a fire"))
 				findNewTile(start, false);
@@ -2021,7 +2040,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				sawLamp = true;
 		}
 	}
-	final Color colorGreenL = new Color(40, 255, 60, 180); // back
+	final Color colorGreenL = new Color(40, 255, 50, 180); // back
 	final Color colorGreenH = new Color(50, 255, 50, 200);
 	final Color colorRed = new Color(255, 50, 50, 150); // red
 	final Color colorWhiteL = new Color(255, 255, 255, 100); // White
@@ -3511,7 +3530,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	}
 	private BufferedImage getImage(final String fileName, final String imageURL) {
 		try {
-			final File dir = new File(Configuration.Paths.getScriptCacheDirectory(), "DynamicWoodcutter"); // TODO
+			final File dir = new File(Configuration.Paths.getScriptCacheDirectory(), "DynamicWoodcutter");
 			if (!dir.exists())
 				dir.mkdir();
 			final File f = new File(dir + File.separator + fileName);
@@ -3591,7 +3610,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					sleep(random(500, 2500));
 					break;
 				case 3: // Examine
-					outer: switch (random(0, 5)) {
+					outer: switch (random(0, 6)) {
 						case 0:
 							final RSItem tinderbox = inventory.getItem(tinderboxID);
 							if (trainFM && tinderbox != null) {
@@ -3678,7 +3697,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					}
 					break;
 			}
-			if (powerchop)
+			if (powerchop && !trainFM)
 				antibanTimer = System.currentTimeMillis() + random(15000, 60000);
 			else
 				antibanTimer = System.currentTimeMillis() + random(8000, 25000);
