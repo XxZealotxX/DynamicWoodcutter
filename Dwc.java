@@ -156,11 +156,11 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	final int[] willowID = { 38616, 38627, 38616, 58006 };
 	final int[] yewID = { 38755 };
 	int runeHatchetPrice = -1;
-	int run = random(5, 30);
+	int oakPrice = -1;
 	int totalCash = 0;
 	int bankCash = 0;
 	int oakCash = 0;
-	int oakPrice = -1;
+	int run = random(5, 30);
 	boolean checkBank = false;
 	boolean useBank = false;
 	boolean useDeposit = false;
@@ -191,7 +191,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	double currVer = -1;
 	boolean loading = false;
 	final Timer dotTimer = new Timer(200);
-	final Timer screenshotTimer = new Timer(7200000);
+	Timer screenshotTimer;
 	final Timer dropTimer = new Timer(1300);
 	Timer rpTimer = null;
 	boolean wait = true;
@@ -930,40 +930,27 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				return 0;
 			}
 		}
-		if (game.getClientState() == 11 && interfaces.get(137).isValid()) {
+		if (isLoggedIn()) {
 			if (initialXP == -1) {
 				initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
 				initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
 				initialLevel = wcLvl();
 				initialLevel2 = fmLvl();
 				startTime = System.currentTimeMillis();
+				screenshotTimer = new Timer(7200000);
 				antibanTimer = startTime + random(5000, 10000);
 				status = "";
-				showPaint = true;
-			}
-			if (wasLoggedOut) {
-				showPaint = true;
-				wasLoggedOut = false;
-				return 0;
 			}
 		} else {
-			if (showPaint)
-				wasLoggedOut = true;
-			showPaint = false;
-			return 0;
+			return 1000;
+		}
+		if (wait) {
+			return 100;
 		}
 		if (screenshotTimer != null && !screenshotTimer.isRunning()) {
 			log("Taking screenshot.");
 			env.saveScreenshot(true);
 			screenshotTimer.reset();
-		}
-		if (wait) {
-			status = "Waiting" + manageDots();
-			startTime = System.currentTimeMillis();
-			antibanTimer = startTime + random(5000, 10000);
-			initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
-			initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
-			return 100;
 		}
 		totalCash = inventory.getItem(995) == null ? bankCash + oakCash : inventory.getItem(995).getStackSize()
 		        + bankCash + oakCash;
@@ -1048,6 +1035,9 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		}
 		return -1;
 	}
+	private boolean isLoggedIn() {
+	    return interfaces.get(137).isValid() && (game.getClientState() == 11 || game.isLoading());
+    }
 	private String manageDots() {
 		if (!dotTimer.isRunning()) {
 			dotTimer.reset();
@@ -1253,15 +1243,14 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		if (calc.distanceTo(t) <= closeDist) {
 			RSObject tree = getNearestTree(treeID, t, closeDist);
 			if (tree != null) {
-				if (clickTree)
-					if (calc.tileOnScreen(tree.getLocation())) {
-						new Camera(Camera.PITCH);
-						if (!tiles.interact(tree.getLocation(), "Chop down " + treeName))
-							return 0;
-						clickTree = false;
-						dropTimer.reset();
+				if (clickTree && calc.tileOnScreen(tree.getLocation())) {
+					new Camera(Camera.PITCH);
+					if (!tiles.interact(tree.getLocation(), "Chop down " + treeName))
 						return 0;
-					}
+					clickTree = false;
+					dropTimer.reset();
+					return 0;
+				}
 				if (!dropTimer.isRunning()
 				        && ((treeID == this.treeID || treeID == willowID) && distanceTo(tree) > 1 || (treeID == oakID || treeID == yewID)
 				                && distanceTo(tree) > 2))
@@ -1492,6 +1481,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	/**
 	 * @param r An array of starting tiles.
 	 * @param p True to use priority, false to use closest method.
+	 * @return True if a new destination was choosen, false otherwise.
 	 */
 	private boolean findNewTile(final RSTile[] r, final boolean p) {
 		if (!p) {
@@ -1819,12 +1809,14 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 			globeSelected = false;
 	}
 	public void mousePressed(final MouseEvent e) {
+		if (!isLoggedIn())
+			return;
 		final Rectangle showArea = new Rectangle(mp.x + mp.w - 34, mp.y + mp.h - 19, 34, 19);
 		final Rectangle fmArea = new Rectangle(490, 32, 25, 25);
 		final Rectangle lockArea = new Rectangle(462, 5, 24, 24);
 		final Rectangle infoArea = new Rectangle(490, 59, 25, 25);
 		final Rectangle settingsArea = new Rectangle(490, 86, 25, 25);
-		final Rectangle clickArea = new Rectangle(240, 150, 50, 50);
+		final Rectangle startArea = new Rectangle(240, 150, 50, 50);
 		final Rectangle logArea = new Rectangle(336, 3, 31, 25);
 		final Rectangle oakArea = new Rectangle(367, 3, 31, 25);
 		final Rectangle willowArea = new Rectangle(398, 3, 31, 25);
@@ -1842,169 +1834,175 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		final Rectangle aHatchet = new Rectangle(469, 425, 25, 25);
 		final Rectangle checkBankArea = new Rectangle(200, 345, 25, 25);
 		final Point a = e.getPoint();
-		if (showPaint) {
-			if (mp.moveBox.contains(a) && !showArea.contains(a)) {
-				moving = true;
-				mp.xLoc = e.getX() - mp.x;
-				mp.yLoc = e.getY() - mp.y;
+		if (showPaint && mp.moveBox.contains(a) && !showArea.contains(a)) {
+			moving = true;
+			mp.xLoc = e.getX() - mp.x;
+			mp.yLoc = e.getY() - mp.y;
+		}
+		if (!playClicked) {
+			if (indHatchet.contains(a))
+				useAvailableHatchetsSelected = false;
+			if (aHatchet.contains(a))
+				useAvailableHatchetsSelected = true;
+			if (cutYewArea.contains(a))
+				yewsAfter60Selected = !yewsAfter60Selected;
+			if (checkBankArea.contains(a))
+				checkBankSelected = !checkBankSelected;
+			if (startArea.contains(a)) {
+				if (wait) {
+					startTime = System.currentTimeMillis();
+					screenshotTimer = new Timer(7200000);
+					antibanTimer = startTime + random(5000, 10000);
+					initialXP = skills.getCurrentExp(Skills.WOODCUTTING);
+					initialXP2 = skills.getCurrentExp(Skills.FIREMAKING);
+				}
+				playClicked = true;
+				showSettings = false;
+				wait = false;
+				showPaint = true;
+				useAvailableHatchets = useAvailableHatchetsSelected;
+				yewAfter60 = yewsAfter60Selected;
+				checkBank = checkBankSelected;
 			}
-			if (!playClicked) {
-				if (indHatchet.contains(a))
-					useAvailableHatchetsSelected = false;
-				if (aHatchet.contains(a))
-					useAvailableHatchetsSelected = true;
-				if (cutYewArea.contains(a))
-					yewsAfter60Selected = !yewsAfter60Selected;
-				if (checkBankArea.contains(a))
-					checkBankSelected = !checkBankSelected;
-				if (clickArea.contains(a)) {
-					playClicked = true;
-					showSettings = false;
-					wait = false;
-					useAvailableHatchets = useAvailableHatchetsSelected;
-					yewAfter60 = yewsAfter60Selected;
-					checkBank = checkBankSelected;
+		}
+		if (fmArea.contains(a))
+			trainFM = !trainFM;
+		if (infoArea.contains(a))
+			sendToURL("http://goo.gl/WEQX6");
+		if (settingsArea.contains(a))
+			if (!showSettings) {
+				playClicked = false;
+				showSettings = true;
+			} else
+				showSettings = false;
+		if (globeSelected) {
+			if (lockArea.contains(a))
+				locked = !locked;
+			if (logArea.contains(a))
+				if (!treeSelected) {
+					treeSelected = true;
+					oakSelected = false;
+					willowSelected = false;
+					yewSelected = false;
+				}
+			if (oakArea.contains(a))
+				if (!oakSelected) {
+					treeSelected = false;
+					oakSelected = true;
+					willowSelected = false;
+					yewSelected = false;
+				}
+			if (willowArea.contains(a))
+				if (!willowSelected) {
+					treeSelected = false;
+					oakSelected = false;
+					willowSelected = true;
+					yewSelected = false;
+				}
+			if (yewArea.contains(a))
+				if (!yewSelected) {
+					treeSelected = false;
+					oakSelected = false;
+					willowSelected = false;
+					yewSelected = true;
+				}
+			if (treeSelected) {
+				if (idx1.contains(a))
+					treeLocation = 1;
+				if (mode1.contains(a)) {
+					bankTree = false;
+					dropTree = false;
+				}
+				if (mode2.contains(a)) {
+					dropTree = true;
+					bankTree = false;
+				}
+				if (mode3.contains(a)) {
+					bankTree = true;
+					dropTree = false;
 				}
 			}
-			if (fmArea.contains(a))
-				trainFM = !trainFM;
-			if (infoArea.contains(a))
-				sendToURL("http://goo.gl/WEQX6");
-			if (settingsArea.contains(a))
-				if (!showSettings) {
-					playClicked = false;
-					showSettings = true;
-				} else
-					showSettings = false;
-			if (globeSelected) {
-				if (lockArea.contains(a))
-					locked = !locked;
-				if (logArea.contains(a))
-					if (!treeSelected) {
-						treeSelected = true;
-						oakSelected = false;
-						willowSelected = false;
-						yewSelected = false;
-					}
-				if (oakArea.contains(a))
-					if (!oakSelected) {
-						treeSelected = false;
-						oakSelected = true;
-						willowSelected = false;
-						yewSelected = false;
-					}
-				if (willowArea.contains(a))
-					if (!willowSelected) {
-						treeSelected = false;
-						oakSelected = false;
-						willowSelected = true;
-						yewSelected = false;
-					}
-				if (yewArea.contains(a))
-					if (!yewSelected) {
-						treeSelected = false;
-						oakSelected = false;
-						willowSelected = false;
-						yewSelected = true;
-					}
-				if (treeSelected) {
-					if (idx1.contains(a))
-						treeLocation = 1;
+			if (oakSelected) {
+				if (idx1.contains(a))
+					oakLocation = 1;
+				if (idx2.contains(a))
+					oakLocation = 2;
+				if (idx3.contains(a))
+					oakLocation = 3;
+				if (mode1.contains(a)) {
+					bankOak = true;
+					dropOak = false;
+					powerchopOak = false;
+				}
+				if (mode2.contains(a)) {
+					dropOak = true;
+					bankOak = false;
+					powerchopOak = false;
+				}
+				if (mode3.contains(a)) {
+					bankOak = false;
+					dropOak = false;
+					powerchopOak = true;
+				}
+			}
+			if (willowSelected) {
+				if (idx1.contains(a))
+					willowLocation = 1;
+				if (idx2.contains(a))
+					willowLocation = 2;
+				if (idx3.contains(a))
+					willowLocation = 3;
+				if (idx4.contains(a))
+					willowLocation = 4;
+				if (willowLocation == 1 || willowLocation == 2) {
 					if (mode1.contains(a)) {
-						bankTree = false;
-						dropTree = false;
+						bankWillow = false;
+						dropWillow = false;
+						powerchopWillow = false;
 					}
 					if (mode2.contains(a)) {
-						dropTree = true;
-						bankTree = false;
+						dropWillow = false;
+						bankWillow = true;
+						powerchopWillow = false;
 					}
 					if (mode3.contains(a)) {
-						bankTree = true;
-						dropTree = false;
+						bankWillow = false;
+						dropWillow = true;
+						powerchopWillow = false;
+					}
+					if (mode4.contains(a)) {
+						bankWillow = false;
+						dropWillow = false;
+						powerchopWillow = true;
 					}
 				}
-				if (oakSelected) {
-					if (idx1.contains(a))
-						oakLocation = 1;
-					if (idx2.contains(a))
-						oakLocation = 2;
-					if (idx3.contains(a))
-						oakLocation = 3;
+				if (willowLocation == 3 || willowLocation == 4) {
 					if (mode1.contains(a)) {
-						bankOak = true;
-						dropOak = false;
-						powerchopOak = false;
+						dropWillow = false;
+						bankWillow = true;
+						powerchopWillow = false;
 					}
 					if (mode2.contains(a)) {
-						dropOak = true;
-						bankOak = false;
-						powerchopOak = false;
+						bankWillow = false;
+						dropWillow = true;
+						powerchopWillow = false;
 					}
 					if (mode3.contains(a)) {
-						bankOak = false;
-						dropOak = false;
-						powerchopOak = true;
+						bankWillow = false;
+						dropWillow = false;
+						powerchopWillow = true;
 					}
+					if (!bankWillow && !powerchopWillow && !dropWillow)
+						bankWillow = true;
 				}
-				if (willowSelected) {
-					if (idx1.contains(a))
-						willowLocation = 1;
-					if (idx2.contains(a))
-						willowLocation = 2;
-					if (idx3.contains(a))
-						willowLocation = 3;
-					if (idx4.contains(a))
-						willowLocation = 4;
-					if (willowLocation == 1 || willowLocation == 2) {
-						if (mode1.contains(a)) {
-							bankWillow = false;
-							dropWillow = false;
-							powerchopWillow = false;
-						}
-						if (mode2.contains(a)) {
-							dropWillow = false;
-							bankWillow = true;
-							powerchopWillow = false;
-						}
-						if (mode3.contains(a)) {
-							bankWillow = false;
-							dropWillow = true;
-							powerchopWillow = false;
-						}
-						if (mode4.contains(a)) {
-							bankWillow = false;
-							dropWillow = false;
-							powerchopWillow = true;
-						}
-					}
-					if (willowLocation == 3 || willowLocation == 4) {
-						if (mode1.contains(a)) {
-							dropWillow = false;
-							bankWillow = true;
-							powerchopWillow = false;
-						}
-						if (mode2.contains(a)) {
-							bankWillow = false;
-							dropWillow = true;
-							powerchopWillow = false;
-						}
-						if (mode3.contains(a)) {
-							bankWillow = false;
-							dropWillow = false;
-							powerchopWillow = true;
-						}
-						if (!bankWillow && !powerchopWillow && !dropWillow)
-							bankWillow = true;
-					}
-				}
-				if (yewSelected) {
-					if (idx1.contains(a))
-						yewLocation = 1;
-					if (idx2.contains(a))
-						yewLocation = 2;
-					if (idx3.contains(a))
-						yewLocation = 3;
-				}
+			}
+			if (yewSelected) {
+				if (idx1.contains(a))
+					yewLocation = 1;
+				if (idx2.contains(a))
+					yewLocation = 2;
+				if (idx3.contains(a))
+					yewLocation = 3;
 			}
 		}
 		if (showArea.contains(a))
@@ -2084,7 +2082,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 		minutes = millis / (1000 * 60);
 		millis -= minutes * (1000 * 60);
 		seconds = millis / 1000;
-		if (interfaces.get(137).isValid() || game.getClientState() == 11) {
+		if (isLoggedIn()) {
 			if (globeSelected) {
 				if (treeSelected) {
 					g.setColor(colorBlack); // Largest box
@@ -2466,8 +2464,8 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				mp.x = 0;
 			if (mp.y < 0)
 				mp.y = 0;
-			if (mp.x > 765 - w)
-				mp.x = 765 - w;
+			if (mp.x > 764 - w)
+				mp.x = 764 - w;
 			if (mp.y > 502 - h)
 				mp.y = 502 - h;
 			moveBox = new Rectangle(x, y, 176, 96);
@@ -2483,7 +2481,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				g.setColor(Color.BLACK);
 				g.drawRect(x, y - 21, w, 18);
 				g.setColor(colorGreenH); // Green bar
-				g.fillRect(x + 2, y - 19, skills.getPercentToNextLevel(Skills.WOODCUTTING) * w / 100, 15);
+				g.fillRect(x + 2, y - 19 + 1, skills.getPercentToNextLevel(Skills.WOODCUTTING) * (w - 1) / 100, 15 - 2);
 				g.setColor(colorWhiteL); // White bar
 				g.fillRect(x + 1, y - 12, w - 1, 9);
 				g.setFont(arialL);
@@ -2491,23 +2489,23 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				drawCenteredString(Integer.toString(wcLvl()) + " WC", x, y - 20, w, 18, g);
 				if (trainFM) {
 					g.setColor(colorGreenL);
-					g.fillRect(x, y - 56, w, 32); // Green back
+					g.fillRect(x, y - 73, w, 49); // Green back
 					g.setColor(Color.BLACK);
 					g.setStroke(stroke1);
-					g.drawRect(x, y - 56, w, 32);
+					g.drawRect(x, y - 73, w, 49);
 					g.setColor(colorRed); // Red bar
-					g.fillRect(x, y - 77, w, 18);
+					g.fillRect(x, y - 94, w, 18);
 					g.setColor(Color.BLACK);
-					g.drawRect(x, y - 77, w, 18);
+					g.drawRect(x, y - 94, w, 18);
 					g.setColor(colorGreenH); // Green bar
-					g.fillRect(x + 2, y - 75, skills.getPercentToNextLevel(Skills.FIREMAKING), 15);
+					g.fillRect(x + 2, y - 91, skills.getPercentToNextLevel(Skills.FIREMAKING) * (w - 1) / 100, 13);
 					g.setColor(colorWhiteL); // White bar
-					g.fillRect(x + 1, y - 68, w - 1, 9);
+					g.fillRect(x + 1, y - 85, w - 1, 9);
 					g.setFont(arialL);
 					g.setColor(Color.BLACK);
-					drawCenteredString(Integer.toString(fmLvl()) + " FM", x, y - 76, w, 18, g);
+					drawCenteredString(Integer.toString(fmLvl()) + " FM", x, y - 76 - 17, w, 18, g);
 					g.drawString(fmLvl() - initialLevel2 + " levels, "
-					        + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) + " xp", x + 5, y - 42);
+					        + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) + " xp", x + 5, y - 42 - 17);
 					g.drawString(
 					    (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) * 3600D
 					            / (System.currentTimeMillis() - startTime) * 10)
@@ -2516,17 +2514,28 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					            + (double) Math.round((skills.getCurrentExp(Skills.FIREMAKING)
 					                    + skills.getCurrentExp(Skills.WOODCUTTING) - initialXP - initialXP2)
 					                    * 3600D / (System.currentTimeMillis() - startTime) * 10) / 10 + "k total xp/hr",
-					    x + 5, y - 27);
-					g.setColor(Color.WHITE);
-					long timeRemaining = timer2 - System.currentTimeMillis();
-					if (timeRemaining >= 0)
-						g.drawString(Long.toString(timeRemaining), 255, 180);
-					else if (timeRemaining >= -5000)
-						g.drawString("0", 255, 180);
+					    x + 5, y - 27 - 17);
+					double ttlFm = Math.round((double) (skills.getExpToNextLevel(Skills.FIREMAKING))
+					        / (double) (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2)
+					        * (double) (System.currentTimeMillis() - startTime) / 36000) / 10d;
+					if (ttlFm > 1000)
+						ttlFm = 0;
+					g.drawString(ttlFm + " hours until " + (fmLvl() + 1) + " fm.", x + 5, y - 27 - 2);
+					if (burnLogs) {
+						g.setColor(Color.WHITE);
+						long timeRemaining = timer2 - System.currentTimeMillis();
+						if (timeRemaining >= 0)
+							g.drawString(Long.toString(timeRemaining), 255, 180);
+					}
 				}
 				g.setFont(cordia);
+				g.setColor(new Color(20, 20, 20, 100));
+				g.drawString("Dynamic Woodcutter", x + 5, y + 17);
 				g.setColor(Color.BLACK);
 				g.drawString("Dynamic Woodcutter", x + 6, y + 18);
+				g.setFont(arialS);
+				g.setColor(Color.BLACK);
+				g.drawString("v" + scriptVersion, x + 156, y + 18);
 				g.setFont(arialL); // General text
 				if (status != null && !status.contains("unavailable"))
 					g.drawString("Status: " + status, x + 5, y + 33);
@@ -2536,8 +2545,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					g.setColor(Color.BLACK);
 				}
 				DecimalFormat a = new DecimalFormat("00");
-				g.drawString("Time: " + a.format(hours) + ":" + a.format(minutes) + ":" + a.format(seconds)
-				        + "   Version: " + scriptVersion, x + 5, y + 48);
+				g.drawString("Time: " + a.format(hours) + ":" + a.format(minutes) + ":" + a.format(seconds), x + 5, y + 48);
 				if (totalCash > 1000000)
 					g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100000) / 10d) + "m",
 					    x + 5, y + 63);
@@ -2548,17 +2556,17 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					g.drawString("Available wealth: " + Integer.toString(totalCash), x + 5, y + 63);
 				g.drawString(wcLvl() - initialLevel + " levels and "
 				        + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) + " xp gained.", x + 5, y + 78);
-				double ttl = Math.round((double) (skills.getExpToNextLevel(Skills.WOODCUTTING))
+				double ttlWc = Math.round((double) (skills.getExpToNextLevel(Skills.WOODCUTTING))
 				        / (double) (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP)
 				        * (double) (System.currentTimeMillis() - startTime) / 36000) / 10d;
-				if (ttl > 1000) {
-					ttl = 0;
+				if (ttlWc > 1000) {
+					ttlWc = 0;
 				}
 				g.drawString(
 				    (double) Math.round((skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) * 3600D
 				            / (System.currentTimeMillis() - startTime) * 10)
 				            / 10 + "k exp/hour.", x + 5, y + 93);
-				g.drawString(ttl + " hours until " + (wcLvl() + 1) + " wc.", x + 5, y + 108);
+				g.drawString(ttlWc + " hours until " + (wcLvl() + 1) + " wc.", x + 5, y + 108);
 				if (antiBan.length() > 0) {
 					g.setFont(arialS);
 					g.setColor(colorWhiteL);
