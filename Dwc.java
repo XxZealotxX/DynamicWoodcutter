@@ -2,6 +2,7 @@ import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -1818,7 +1819,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 			globeSelected = false;
 	}
 	public void mousePressed(final MouseEvent e) {
-		final Rectangle showArea = new Rectangle(mp.x + 142, mp.y + 77, 34, 19);
+		final Rectangle showArea = new Rectangle(mp.x + mp.w - 34, mp.y + mp.h - 19, 34, 19);
 		final Rectangle fmArea = new Rectangle(490, 32, 25, 25);
 		final Rectangle lockArea = new Rectangle(462, 5, 24, 24);
 		final Rectangle infoArea = new Rectangle(490, 59, 25, 25);
@@ -2019,7 +2020,7 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				findNewTile(start, false);
 			if (m.contains("the ladder has been completely destroyed"))
 				sawLamp = true;
-			if (m.contains("You've just advanced")) {
+			if (m.contains("You've just advanced") && !m.contains("Firemaking")) {
 				clickTree = true;
 			}
 		}
@@ -2452,12 +2453,11 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 	}
 
 	class Paint {
-		public Paint() {
-			start = System.currentTimeMillis();
-		}
 		long start;
-		int x = 340;
-		int y = 242;
+		int x = 550;
+		int y = 327;
+		int w = 176 + 10;
+		int h = 111 + 15; // TODO
 		int xLoc = x;
 		int yLoc = y;
 		Rectangle moveBox = new Rectangle(x, y, 176, 96);
@@ -2466,46 +2466,46 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 				mp.x = 0;
 			if (mp.y < 0)
 				mp.y = 0;
-			if (mp.x > 588)
-				mp.x = 588;
-			if (mp.y > 406)
-				mp.y = 406;
+			if (mp.x > 765 - w)
+				mp.x = 765 - w;
+			if (mp.y > 502 - h)
+				mp.y = 502 - h;
 			moveBox = new Rectangle(x, y, 176, 96);
 			final Graphics2D g = (Graphics2D) g1;
 			if (showPaint) {
 				g.setColor(colorGreenL);
-				g.fillRect(x, y, 176, 96); // Green back
+				g.fillRect(x, y, w, h); // Green back
 				g.setColor(Color.BLACK);
 				g.setStroke(stroke1);
-				g.drawRect(x, y, 176, 96);
+				g.drawRect(x, y, w, h);
 				g.setColor(colorRed); // Red bar
-				g.fillRect(x, y - 21, 176, 18);
+				g.fillRect(x, y - 21, w, 18);
 				g.setColor(Color.BLACK);
-				g.drawRect(x, y - 21, 176, 18);
+				g.drawRect(x, y - 21, w, 18);
 				g.setColor(colorGreenH); // Green bar
-				g.fillRect(x + 2, y - 19, skills.getPercentToNextLevel(Skills.WOODCUTTING), 15);
+				g.fillRect(x + 2, y - 19, skills.getPercentToNextLevel(Skills.WOODCUTTING) * w / 100, 15);
 				g.setColor(colorWhiteL); // White bar
-				g.fillRect(x + 1, y - 12, 175, 9);
+				g.fillRect(x + 1, y - 12, w - 1, 9);
 				g.setFont(arialL);
 				g.setColor(Color.BLACK);
-				g.drawString(Integer.toString(wcLvl()) + " WC", x + 75, y - 7);
+				drawCenteredString(Integer.toString(wcLvl()) + " WC", x, y - 20, w, 18, g);
 				if (trainFM) {
 					g.setColor(colorGreenL);
-					g.fillRect(x, y - 56, 176, 32); // Green back
+					g.fillRect(x, y - 56, w, 32); // Green back
 					g.setColor(Color.BLACK);
 					g.setStroke(stroke1);
-					g.drawRect(x, y - 56, 176, 32);
+					g.drawRect(x, y - 56, w, 32);
 					g.setColor(colorRed); // Red bar
-					g.fillRect(x, y - 77, 176, 18);
+					g.fillRect(x, y - 77, w, 18);
 					g.setColor(Color.BLACK);
-					g.drawRect(x, y - 77, 176, 18);
+					g.drawRect(x, y - 77, w, 18);
 					g.setColor(colorGreenH); // Green bar
 					g.fillRect(x + 2, y - 75, skills.getPercentToNextLevel(Skills.FIREMAKING), 15);
 					g.setColor(colorWhiteL); // White bar
-					g.fillRect(x + 1, y - 68, 175, 9);
+					g.fillRect(x + 1, y - 68, w - 1, 9);
 					g.setFont(arialL);
 					g.setColor(Color.BLACK);
-					g.drawString(Integer.toString(fmLvl()) + " FM", x + 75, y - 63);
+					drawCenteredString(Integer.toString(fmLvl()) + " FM", x, y - 76, w, 18, g);
 					g.drawString(fmLvl() - initialLevel2 + " levels, "
 					        + (skills.getCurrentExp(Skills.FIREMAKING) - initialXP2) + " xp", x + 5, y - 42);
 					g.drawString(
@@ -2535,6 +2535,9 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					g.drawString("Status: " + status, x + 5, y + 33);
 					g.setColor(Color.BLACK);
 				}
+				DecimalFormat a = new DecimalFormat("00");
+				g.drawString("Time: " + a.format(hours) + ":" + a.format(minutes) + ":" + a.format(seconds)
+				        + "   Version: " + scriptVersion, x + 5, y + 48);
 				if (totalCash > 1000000)
 					g.drawString("Available wealth: " + Double.toString(Math.round(totalCash / 100000) / 10d) + "m",
 					    x + 5, y + 63);
@@ -2543,21 +2546,19 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					    x + 5, y + 63);
 				else
 					g.drawString("Available wealth: " + Integer.toString(totalCash), x + 5, y + 63);
-				g.drawString(wcLvl() - initialLevel + " levels" + ", "
-				        + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) + " xp", x + 5, y + 78);
+				g.drawString(wcLvl() - initialLevel + " levels and "
+				        + (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) + " xp gained.", x + 5, y + 78);
+				double ttl = Math.round((double) (skills.getExpToNextLevel(Skills.WOODCUTTING))
+				        / (double) (skills.getCurrentExp(Skills.WOODCUTTING) - initialXP)
+				        * (double) (System.currentTimeMillis() - startTime) / 36000) / 10d;
+				if (ttl > 1000) {
+					ttl = 0;
+				}
 				g.drawString(
 				    (double) Math.round((skills.getCurrentExp(Skills.WOODCUTTING) - initialXP) * 3600D
 				            / (System.currentTimeMillis() - startTime) * 10)
-				            / 10 + "k xp/hr", x + 5, y + 93);
-				g.setFont(arialL);
-				DecimalFormat a = new DecimalFormat("00");
-				g.drawString("Time: " + a.format(hours) + ":" + a.format(minutes) + ":" + a.format(seconds)
-				        + "   Version: " + scriptVersion, x + 5, y + 48);
-				g.setColor(Color.BLACK); // Show/Hide button
-				g.drawRect(x + 142, y + 77, 34, 19);
-				g.setFont(arialL);
-				g.setColor(Color.BLACK);
-				g.drawString("Hide", x + 147, y + 92);
+				            / 10 + "k exp/hour.", x + 5, y + 93);
+				g.drawString(ttl + " hours until " + (wcLvl() + 1) + " wc.", x + 5, y + 108);
 				if (antiBan.length() > 0) {
 					g.setFont(arialS);
 					g.setColor(colorWhiteL);
@@ -2566,15 +2567,27 @@ public class Dwc extends Script implements PaintListener, MouseListener, MouseMo
 					g.drawRect(100, 323, g.getFontMetrics().stringWidth("Antiban: " + antiBan) + 3, 15);
 					g.drawString("Antiban: " + antiBan, 102, 333);
 				}
-			} else {
-				g.setColor(colorGreenL); // Show/Hide button
-				g.fillRect(x + 142, y + 77, 34, 19);
-				g.setColor(Color.BLACK);
-				g.drawRect(x + 142, y + 77, 34, 19);
+				g.setFont(arialL);
+				g.setColor(Color.BLACK); // Hide button
+				g.drawRect(x + w - 34, y + h - 19, 34, 19);
 				g.setFont(arialL);
 				g.setColor(Color.BLACK);
-				g.drawString("Show", x + 144, y + 92);
+				g.drawString("Hide", x + w - 29, y + h - 4);
+			} else {
+				g.setColor(colorGreenL); // Show button TODO show/hide area needs to be changed.
+				g.fillRect(x + w - 34, y + h + -19, 34, 19);
+				g.setColor(Color.BLACK);
+				g.drawRect(x + w - 34, y + h - 19, 34, 19);
+				g.setFont(arialL);
+				g.setColor(Color.BLACK);
+				g.drawString("Show", x + w - 32, y + h - 4);
 			}
+		}
+		public void drawCenteredString(String s, int x, int y, int w, int h, Graphics g) {
+			FontMetrics fm = g.getFontMetrics();
+			int xx = x + (w - fm.stringWidth(s)) / 2;
+			int yy = y + (fm.getAscent() + (h - (fm.getAscent() + fm.getDescent())) / 2);
+			g.drawString(s, xx, yy);
 		}
 	}
 	private void drawMouse(final Graphics2D g) {
